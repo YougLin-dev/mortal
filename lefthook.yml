@@ -1,5 +1,4 @@
 pre-commit:
-  parallel: true
   commands:
     format:
       run: pnpm run format
