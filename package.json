@@ -23,7 +23,8 @@
   "pnpm": {
     "onlyBuiltDependencies": [
       "electron",
-      "electron-winstaller"
+      "electron-winstaller",
+      "esbuild"
     ]
   },
   "devDependencies": {
