@@ -5,7 +5,7 @@
   "singleQuote": true,
   "trailingComma": "none",
   "printWidth": 150,
-  "plugins": ["prettier-plugin-svelte"],
+  "plugins": ["prettier-plugin-svelte", "prettier-plugin-tailwindcss"],
   "overrides": [
     {
       "files": "*.svelte",
@@ -13,5 +13,7 @@
         "parser": "svelte"
       }
     }
-  ]
+  ],
+  "tailwindStylesheet": "./src/renderer/app.css",
+  "tailwindFunctions": ["cn"]
 }
