@@ -10,7 +10,7 @@
     "package": "electron-forge package",
     "make": "electron-forge make",
     "publish": "electron-forge publish",
-    "lint": "eslint .",
+    "lint": "eslint --fix .",
     "format": "prettier --write .",
     "check": "svelte-check --tsconfig ./tsconfig.app.json && tsc -p tsconfig.node.json"
   },
@@ -24,10 +24,13 @@
     "onlyBuiltDependencies": [
       "electron",
       "electron-winstaller",
-      "esbuild"
+      "esbuild",
+      "lefthook"
     ]
   },
   "devDependencies": {
+    "@commitlint/cli": "^19.8.1",
+    "@commitlint/config-conventional": "^19.8.1",
     "@electron-forge/cli": "^7.9.0",
     "@electron-forge/maker-deb": "^7.9.0",
     "@electron-forge/maker-rpm": "^7.9.0",
@@ -46,6 +49,7 @@
     "electron": "38.1.2",
     "eslint": "^9.36.0",
     "eslint-plugin-svelte": "^3.12.4",
+    "lefthook": "^1.13.3",
     "prettier": "^3.6.2",
     "prettier-plugin-svelte": "^3.4.0",
     "svelte": "^5.39.4",
