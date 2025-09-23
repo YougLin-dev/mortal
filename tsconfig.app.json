@@ -1,0 +1,30 @@
+{
+  "extends": [
+    "@electron-toolkit/tsconfig/tsconfig.web.json",
+    "@tsconfig/svelte/tsconfig.json"
+  ],
+  "compilerOptions": {
+    "composite": true,
+
+    "target": "ES2022",
+    "useDefineForClassFields": true,
+    "module": "ESNext",
+    "resolveJsonModule": true,
+    /**
+     * Typecheck JS in `.svelte` and `.js` files by default.
+     * Disable checkJs if you'd like to use dynamic types in JS.
+     * Note that setting allowJs false does not prevent the use
+     * of JS in `.svelte` files.
+     */
+    "allowJs": true,
+    "checkJs": true,
+    "isolatedModules": true,
+    "moduleDetection": "force"
+  },
+  "include": [
+    "src/renderer/**/*.ts",
+    "src/renderer/**/*.js",
+    "src/renderer/**/*.svelte"
+  ],
+  "exclude": ["src/renderer/svelte.config.js"]
+}
