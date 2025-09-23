@@ -5,7 +5,10 @@ import eslintPluginSvelte from 'eslint-plugin-svelte';
 
 export default defineConfig(
   { ignores: ['**/node_modules', '**/dist', '**/out', '**/.vite'] },
+
   tseslint.configs.recommended,
+  { rules: { '@typescript-eslint/explicit-function-return-type': 'off' } },
+
   eslintPluginSvelte.configs['flat/recommended'],
   {
     files: ['**/*.svelte', '**/*.svelte.ts', '**/*.svelte.js'],
@@ -16,7 +19,7 @@ export default defineConfig(
     }
   },
   {
-    files: ['**/*.{tsx,svelte}'],
+    files: ['**/*.{svelte}'],
     rules: {
       'svelte/no-unused-svelte-ignore': 'off'
     }

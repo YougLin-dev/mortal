@@ -7,6 +7,11 @@ import { resolve } from 'path';
 export default defineConfig({
   root: resolve(__dirname, 'src/renderer'),
   plugins: [tailwindcss(), svelte()],
+  resolve: {
+    alias: {
+      $lib: resolve(__dirname, 'src/renderer/lib')
+    }
+  },
   build: {
     outDir: resolve(__dirname, '.vite/build/renderer/main_window')
   }

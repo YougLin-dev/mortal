@@ -19,7 +19,14 @@
     "allowJs": true,
     "checkJs": true,
     "isolatedModules": true,
-    "moduleDetection": "force"
+    "moduleDetection": "force",
+
+    // Path aliases
+    "baseUrl": ".",
+    "paths": {
+      "$lib": ["src/renderer/lib"],
+      "$lib/*": ["src/renderer/lib/*"]
+    }
   },
   "include": [
     "src/renderer/**/*.ts",

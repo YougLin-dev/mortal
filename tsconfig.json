@@ -3,5 +3,13 @@
   "references": [
     { "path": "./tsconfig.app.json" },
     { "path": "./tsconfig.node.json" }
-  ]
+  ],
+  // for svelte-shadcn
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "$lib": ["src/renderer/lib"],
+      "$lib/*": ["src/renderer/lib/*"]
+    }
+  }
 }
