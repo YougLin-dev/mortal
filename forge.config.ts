@@ -14,7 +14,10 @@ const config: ForgeConfig = {
   },
   rebuildConfig: {},
   makers: [
-    new MakerSquirrel({}),
+    new MakerSquirrel({
+      iconUrl: 'https://youke1.picui.cn/s1/2025/09/24/68d3896b8c2e8.ico',
+      setupIcon: 'resources/images/icon.ico'
+    }),
     new MakerZIP({}, ['darwin']),
     new MakerRpm({
       options: {

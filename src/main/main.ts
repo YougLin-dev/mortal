@@ -31,7 +31,7 @@ const createWindow = async (): Promise<void> => {
       allowRunningInsecureContent: false,
       experimentalFeatures: false
     },
-    icon: path.join(__dirname, `renderer/${MAIN_WINDOW_VITE_NAME}/icon.png`)
+    icon: path.join(__dirname, 'resources/images/icon.png')
   });
 
   if (MAIN_WINDOW_VITE_DEV_SERVER_URL) {
