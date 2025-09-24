@@ -27,6 +27,19 @@ const config: ForgeConfig = {
       }
     })
   ],
+  publishers: [
+    {
+      name: '@electron-forge/publisher-github',
+      config: {
+        repository: {
+          owner: 'YougLin',
+          name: 'mortal'
+        },
+        prerelease: false,
+        draft: false
+      }
+    }
+  ],
   plugins: [
     new VitePlugin({
       build: [
