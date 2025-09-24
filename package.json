@@ -19,7 +19,7 @@
     "name": "YougLin",
     "email": "YougLin@proton.me"
   },
-  "license": "MIT",
+  "license": "AGPL-3.0-only",
   "pnpm": {
     "onlyBuiltDependencies": [
       "@tailwindcss/oxide",
