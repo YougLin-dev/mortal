@@ -90,3 +90,6 @@ typings/
 
 # Electron-Forge
 out/
+
+# Dev tmp storage files
+data/

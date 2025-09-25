@@ -1,5 +1,4 @@
 <script lang="ts">
-  import Header from '$lib/components/titlebar/titlebar.svelte';
   import { Router, goto, route } from '@mateothegreat/svelte5-router';
   import { type RouteResult, type RouteConfig } from '@mateothegreat/svelte5-router';
 
@@ -33,7 +32,6 @@
 </script>
 
 <div class="flex h-screen flex-col">
-  <Header />
   <main class="flex-1 overflow-hidden bg-gray-50 dark:bg-gray-900">
     <div class="flex h-full">
       <aside class="w-64 border-r border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">

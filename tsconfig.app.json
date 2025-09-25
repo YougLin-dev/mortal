@@ -25,13 +25,16 @@
     "baseUrl": ".",
     "paths": {
       "$lib": ["src/renderer/lib"],
-      "$lib/*": ["src/renderer/lib/*"]
+      "$lib/*": ["src/renderer/lib/*"],
+      "@/shared/*": ["src/shared/*"]
     }
   },
   "include": [
     "src/renderer/**/*.ts",
     "src/renderer/**/*.js",
-    "src/renderer/**/*.svelte"
+    "src/renderer/**/*.svelte",
+    "src/shared/**/*.ts",
+    "src/preload/preload.d.ts"
   ],
   "exclude": ["src/renderer/svelte.config.js"]
 }

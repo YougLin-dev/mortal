@@ -9,7 +9,8 @@ export default defineConfig({
   plugins: [tailwindcss(), svelte()],
   resolve: {
     alias: {
-      $lib: resolve(__dirname, 'src/renderer/lib')
+      $lib: resolve(__dirname, 'src/renderer/lib'),
+      '@/shared': resolve(__dirname, 'src/shared')
     }
   },
   build: {
