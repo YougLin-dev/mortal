@@ -48,6 +48,7 @@ const createWindow = async () => {
     minWidth: WIN.MIN_WIDTH,
     minHeight: WIN.MIN_HEIGHT,
     fullscreen: mainWindowState.isFullScreen,
+    alwaysOnTop: mainWindowState.isAlwaysOnTop,
     backgroundColor: platform.isMacOS ? undefined : nativeTheme.shouldUseDarkColors ? '#1f2020' : '#f4f3f2',
     autoHideMenuBar: true,
     titleBarStyle: platform.isMacOS ? 'hiddenInset' : 'hidden',

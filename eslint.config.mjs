@@ -7,7 +7,12 @@ export default defineConfig(
   { ignores: ['**/node_modules', '**/dist', '**/out', '**/.vite'] },
 
   tseslint.configs.recommended,
-  { rules: { '@typescript-eslint/explicit-function-return-type': 'off' } },
+  {
+    rules: {
+      '@typescript-eslint/explicit-function-return-type': 'off',
+      '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_', varsIgnorePattern: '^_' }]
+    }
+  },
 
   eslintPluginSvelte.configs['flat/recommended'],
   {

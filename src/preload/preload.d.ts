@@ -27,6 +27,10 @@ declare global {
       setTheme: (theme: ThemeType) => Promise<void>;
     };
 
+    windowService: {
+      setAlwaysOnTop: (alwaysOnTop: boolean) => Promise<void>;
+    };
+
     storageService: {
       setItem: (key: string, value: StorageValue) => Promise<void>;
       getItem: <T = StorageValue>(key: string) => Promise<T | null>;

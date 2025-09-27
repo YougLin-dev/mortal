@@ -63,3 +63,13 @@ export const TabsManager = {
     }
   }
 };
+
+export const toggleAlwaysOnTop = async () => {
+  try {
+    const newState = !windowStore.current.isAlwaysOnTop;
+    await window.windowService.setAlwaysOnTop(newState);
+    windowStore.current.isAlwaysOnTop = newState;
+  } catch (error) {
+    console.error('Failed to toggle always on top:', error);
+  }
+};

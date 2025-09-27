@@ -126,6 +126,7 @@ export class WindowStateManager {
         this.state.width = winBounds.width;
         this.state.height = winBounds.height;
       }
+      this.state.isAlwaysOnTop = window.isAlwaysOnTop();
       this.state.isMaximized = window.isMaximized();
       this.state.isFullScreen = window.isFullScreen();
       this.state.displayBounds = screen.getDisplayMatching(winBounds).bounds;
@@ -180,6 +181,7 @@ export class WindowStateManager {
       win.setFullScreen(true);
     }
 
+    win.on('always-on-top-changed', () => this.stateChangeHandler());
     win.on('resize', this.stateChangeHandler);
     win.on('move', this.stateChangeHandler);
     win.on('close', this.closeHandler);
@@ -221,6 +223,9 @@ export class WindowStateManager {
   }
   get isFullScreen(): boolean {
     return this.state.isFullScreen;
+  }
+  get isAlwaysOnTop(): boolean {
+    return this.state.isAlwaysOnTop;
   }
   get windowState(): WindowState {
     return { ...this.state };
