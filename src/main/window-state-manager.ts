@@ -39,11 +39,12 @@ export class WindowStateManager {
       tabs: defaults.tabs ?? []
     };
     WindowStateManager.instances.add(this);
+    this.initialize();
   }
 
-  async initialize(): Promise<void> {
+  private initialize(): void {
     try {
-      const savedState = await storage.getItem(this.storageKey);
+      const savedState = storage.getItemSync(this.storageKey);
       if (savedState) {
         this.state = { ...this.state, ...savedState };
         this.validateState();
@@ -133,13 +134,13 @@ export class WindowStateManager {
     }
   }
 
-  private async saveState(win?: BrowserWindow): Promise<void> {
+  private saveState(win?: BrowserWindow): void {
     if (win) {
       this.updateState(win);
     }
 
     try {
-      const persistedState = (await storage.getItem(this.storageKey)) ?? undefined;
+      const persistedState = storage.getItemSync(this.storageKey) ?? undefined;
       const nextState: InternalWindowState = {
         ...(persistedState ?? {}),
         ...this.state,
@@ -148,7 +149,7 @@ export class WindowStateManager {
       };
 
       this.state = nextState;
-      await storage.setItem(this.storageKey, nextState);
+      storage.setItemSync(this.storageKey, nextState);
     } catch (error) {
       console.warn(`Failed to save window state for ${this.options.windowId}:`, error);
     }
@@ -165,9 +166,9 @@ export class WindowStateManager {
     this.updateState();
   };
 
-  private closedHandler = async (): Promise<void> => {
+  private closedHandler = (): void => {
     this.unmanage();
-    await this.saveState();
+    this.saveState();
     WindowStateManager.instances.delete(this);
   };
 
@@ -230,8 +231,7 @@ export class WindowStateManager {
     this.saveState();
   }
 
-  static async saveAllStates(): Promise<void> {
-    const savePromises = Array.from(WindowStateManager.instances).map((instance) => instance.saveState());
-    await Promise.all(savePromises);
+  static saveAllStates(): void {
+    WindowStateManager.instances.forEach((instance) => instance.saveState());
   }
 }

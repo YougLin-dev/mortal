@@ -7,7 +7,6 @@ import { setupIPC } from './ipc-handlers';
 import { AppProtocol } from './electron-protocol';
 import { TITLE_BAR_OVERLAY, WIN } from '@/shared/consts/ui';
 import { platform } from '@electron-toolkit/utils';
-import { themeService } from './services/theme-service';
 import { storage } from './storage';
 import { WindowStateManager } from './window-state-manager';
 import { toArgument } from '@/shared/utils/preload-utils';
@@ -27,8 +26,6 @@ if (started) {
 }
 
 const createWindow = async () => {
-  await themeService.initFromStorage();
-
   const mainWindowState = new WindowStateManager({
     windowId: 'main',
     restoreFullScreen: false,
@@ -40,7 +37,6 @@ const createWindow = async () => {
       type: 'main'
     }
   });
-  await mainWindowState.initialize();
 
   const { shouldUseDarkColors } = nativeTheme;
 
@@ -95,7 +91,7 @@ app.whenReady().then(async () => {
 
 app.on('window-all-closed', async () => {
   console.log('saving all window states before dispose');
-  await WindowStateManager.saveAllStates();
+  WindowStateManager.saveAllStates();
   console.log('wait for storage dispose');
   await storage.dispose();
   console.log('storage disposed');

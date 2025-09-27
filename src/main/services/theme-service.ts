@@ -8,11 +8,8 @@ import { storage } from '@/main/storage';
 
 @Service
 export class ThemeService {
-  // eslint-disable-next-line @typescript-eslint/no-empty-function
-  constructor() {}
-
-  async initFromStorage() {
-    const state = await storage.getItem(STORAGES.APP_THEME_STATE);
+  constructor() {
+    const state = storage.getItemSync(STORAGES.APP_THEME_STATE);
     console.log(`state = ${JSON.stringify(state)}, ${typeof state}`);
 
     if (state == null) {

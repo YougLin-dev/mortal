@@ -1,8 +1,8 @@
 import { platform } from '@electron-toolkit/utils';
 
 export const WIN = {
-  MIN_WIDTH: 1200,
-  MIN_HEIGHT: 800
+  MIN_WIDTH: 800,
+  MIN_HEIGHT: 600
 };
 
 export const TITLE_BAR_OVERLAY = {

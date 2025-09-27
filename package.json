@@ -79,7 +79,7 @@
     "@electron-toolkit/preload": "^3.0.2",
     "@electron-toolkit/utils": "^4.0.0",
     "@mateothegreat/svelte5-router": "^2.16.19",
-    "electron-async-storage": "^0.0.2",
+    "electron-async-storage": "^0.0.3",
     "electron-squirrel-startup": "^1.0.1",
     "es-toolkit": "^1.39.10",
     "mitt": "^3.0.1",
