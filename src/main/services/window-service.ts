@@ -45,6 +45,7 @@ export class WindowService {
     const { shouldUseDarkColors } = nativeTheme;
 
     const mainWindow = new BrowserWindow({
+      show: false,
       x: mainWindowState.x,
       y: mainWindowState.y,
       width: mainWindowState.width,
@@ -70,6 +71,13 @@ export class WindowService {
         additionalArguments: [toArgument('windowState', mainWindowState.windowState), toArgument('isMac', platform.isMacOS)]
       },
       icon: path.join(import.meta.dirname, './resources/images/icon.png')
+    });
+
+    mainWindow.on('ready-to-show', () => {
+      mainWindow.show();
+      if (platform.isWindows) {
+        mainWindow.focus();
+      }
     });
 
     mainWindowState.manage(mainWindow);

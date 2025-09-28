@@ -68,7 +68,10 @@
 
 <div class={cn('flex items-center', className)} role="tablist" style="app-region: drag;" aria-label="Tab bar">
   <div
-    class={cn('flex min-w-0 items-center gap-1 overflow-x-hidden px-4', window.isMac && 'pl-[80px]')}
+    class={cn(
+      'flex min-w-0 items-center gap-1 overflow-x-hidden px-4 outline-none focus:outline-none focus-visible:outline-none',
+      window.isMac && 'pl-[80px]'
+    )}
     use:dndzone={{
       items: TabsManager.tabs,
       flipDurationMs: 200,
