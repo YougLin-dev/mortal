@@ -34,7 +34,7 @@
     "src/renderer/**/*.js",
     "src/renderer/**/*.svelte",
     "src/shared/**/*.ts",
-    "src/preload/preload.d.ts"
+    "src/preload/bridge/types.ts"
   ],
   "exclude": ["src/renderer/svelte.config.js"]
 }

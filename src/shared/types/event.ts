@@ -16,4 +16,7 @@ export interface GlobalEventDataMap {
 
   // storage
   [key: `storage:${string}`]: { key: string; value: StorageValue };
+
+  [key: string]: unknown;
+  [key: symbol]: unknown;
 }

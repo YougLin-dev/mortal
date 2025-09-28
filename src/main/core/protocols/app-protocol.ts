@@ -1,5 +1,6 @@
 import { net, protocol } from 'electron';
-import { join } from 'path';
+import { extname, join, normalize, resolve } from 'path';
+import { pathToFileURL } from 'node:url';
 
 export class AppProtocol {
   private readonly schema: string;
@@ -27,11 +28,20 @@ export class AppProtocol {
   public setupHandler() {
     protocol.handle(this.schema, (request) => {
       const url = new URL(request.url);
-      let filePath = join(this.rendererFileBasePath, url.pathname);
-      if (url.pathname === '/') {
-        filePath = join(this.rendererFileBasePath, 'index.html');
-      }
-      return net.fetch(`file://${filePath}`);
+      // Normalize and sanitize the requested path
+      const rawPathname = url.pathname || '/';
+      const isRoot = rawPathname === '/';
+      const decodedPath = decodeURIComponent(rawPathname.replace(/^\//, ''));
+
+      // SPA fallback: serve index.html for route-like paths without extension
+      const relativePath = isRoot || extname(decodedPath) === '' ? 'index.html' : decodedPath;
+
+      // Prevent path traversal; ensure resolved path stays within the renderer base
+      const base = resolve(this.rendererFileBasePath);
+      const candidate = resolve(base, normalize(relativePath));
+      const safePath = candidate.startsWith(base) ? candidate : join(base, 'index.html');
+
+      return net.fetch(pathToFileURL(safePath).toString());
     });
   }
 }

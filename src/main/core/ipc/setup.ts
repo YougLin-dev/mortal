@@ -1,5 +1,5 @@
 import { getHandlers, getServiceName } from '@/shared/decorators';
-import { services } from './services';
+import { services } from '@/main/services';
 import { ipcMain } from 'electron';
 
 export function setupIPC() {

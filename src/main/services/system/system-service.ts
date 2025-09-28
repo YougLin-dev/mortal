@@ -1,7 +1,6 @@
 import type { IpcMainInvokeEvent } from 'electron';
 import { Handler, Service } from '@/shared/decorators';
 import * as fs from 'fs';
-import { mathService } from './math-service';
 
 @Service
 export class SystemService {
@@ -22,13 +21,6 @@ export class SystemService {
   @Handler
   notify(event: IpcMainInvokeEvent, title: string, message: string) {
     console.log(`Notification from ${event.processId}: ${title} - ${message}`);
-  }
-
-  @Handler
-  add(event: IpcMainInvokeEvent, x: number, y: number): number {
-    const result = mathService.add(x, y);
-    console.log(`Computing ${x} + ${y} = ${result} for PID:${event.processId}`);
-    return result;
   }
 
   @Handler

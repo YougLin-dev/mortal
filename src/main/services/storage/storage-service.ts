@@ -2,8 +2,8 @@ import type { IpcMainInvokeEvent } from 'electron';
 import { type StorageValue, type StorageMeta } from 'electron-async-storage';
 import { Handler, Service } from '@/shared/decorators';
 import type { StorageMetadata, StorageOptions, StorageItem } from '@/shared/types/storage';
-import { eventEmitterService } from './event-emitter';
-import { storage } from '@/main/storage';
+import { eventEmitterService } from '@/main/services/events/broadcaster';
+import { storage } from '@/main/core/storage/config';
 
 @Service
 export class StorageService {

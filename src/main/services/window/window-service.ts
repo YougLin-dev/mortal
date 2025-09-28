@@ -2,10 +2,10 @@ import type { IpcMainInvokeEvent } from 'electron';
 import { BrowserWindow, nativeTheme } from 'electron';
 import path from 'node:path';
 import { Handler, Service } from '@/shared/decorators';
-import { AppProtocol } from '@/main/electron-protocol';
+import { AppProtocol } from '@/main/core/protocols/app-protocol';
 import { TITLE_BAR_OVERLAY, WIN } from '@/shared/consts/ui';
 import { platform } from '@electron-toolkit/utils';
-import { WindowStateManager } from '@/main/window-state-manager';
+import { WindowStateManager } from '@/main/services/window/window-state-manager';
 import { toArgument } from '@/shared/utils/preload-utils';
 
 @Service
@@ -30,7 +30,28 @@ export class WindowService {
   }
 
   async createMainWindow(): Promise<BrowserWindow> {
-    const mainWindowState = new WindowStateManager({
+    const mainWindowState = this.createMainWindowState();
+    const mainWindow = this.buildMainWindow(mainWindowState);
+    mainWindowState.manage(mainWindow);
+    this.attachFirstShowGuards(mainWindow);
+    this.loadMainWindow(mainWindow);
+    return mainWindow;
+  }
+
+  setupProtocolHandler(): void {
+    this.mainWindowProtocol.setupHandler();
+  }
+
+  getAllWindows(): BrowserWindow[] {
+    return BrowserWindow.getAllWindows();
+  }
+
+  getFocusedWindow(): BrowserWindow | null {
+    return BrowserWindow.getFocusedWindow();
+  }
+
+  private createMainWindowState(): WindowStateManager {
+    return new WindowStateManager({
       windowId: 'main',
       restoreFullScreen: false,
       restoreMaximized: true,
@@ -41,10 +62,11 @@ export class WindowService {
         type: 'main'
       }
     });
+  }
 
+  private buildMainWindow(mainWindowState: WindowStateManager): BrowserWindow {
     const { shouldUseDarkColors } = nativeTheme;
-
-    const mainWindow = new BrowserWindow({
+    return new BrowserWindow({
       show: false,
       x: mainWindowState.x,
       y: mainWindowState.y,
@@ -67,21 +89,55 @@ export class WindowService {
         contextIsolation: true,
         allowRunningInsecureContent: false,
         experimentalFeatures: false,
-
         additionalArguments: [toArgument('windowState', mainWindowState.windowState), toArgument('isMac', platform.isMacOS)]
       },
       icon: path.join(import.meta.dirname, './resources/images/icon.png')
     });
+  }
 
-    mainWindow.on('ready-to-show', () => {
-      mainWindow.show();
-      if (platform.isWindows) {
-        mainWindow.focus();
+  private attachFirstShowGuards(mainWindow: BrowserWindow): void {
+    let windowShown = false;
+    let showTimeout: NodeJS.Timeout | null = null;
+
+    const showWindowIfNeeded = (reason: string) => {
+      if (windowShown) return;
+      if (mainWindow.isDestroyed()) return;
+      windowShown = true;
+      if (mainWindow.isMinimized()) mainWindow.restore();
+      if (!mainWindow.isVisible()) mainWindow.show();
+      mainWindow.focus();
+      console.log('main window shown via', reason);
+      if (showTimeout) {
+        clearTimeout(showTimeout);
+        showTimeout = null;
       }
+    };
+
+    // Timeout fallback in case events are delayed or skipped
+    showTimeout = setTimeout(() => {
+      console.warn('ready-to-show timeout; forcing window.show()');
+      showWindowIfNeeded('timeout-4s');
+    }, 4000);
+
+    // Primary: ready-to-show
+    mainWindow.once('ready-to-show', () => {
+      console.log('main window ready to show');
+      showWindowIfNeeded('ready-to-show');
     });
 
-    mainWindowState.manage(mainWindow);
+    // Fallback: did-finish-load (covers rare cases where ready-to-show does not fire)
+    mainWindow.webContents.once('did-finish-load', () => {
+      showWindowIfNeeded('did-finish-load');
+    });
 
+    // Ensure visibility even if load fails
+    mainWindow.webContents.once('did-fail-load', (_ev, errorCode, errorDescription, validatedURL) => {
+      console.error('Main window failed to load:', { errorCode, errorDescription, validatedURL });
+      showWindowIfNeeded('did-fail-load');
+    });
+  }
+
+  private loadMainWindow(mainWindow: BrowserWindow): void {
     if (MAIN_WINDOW_VITE_DEV_SERVER_URL) {
       mainWindow.loadURL(MAIN_WINDOW_VITE_DEV_SERVER_URL);
       mainWindow.webContents.on('did-frame-finish-load', () => {
@@ -90,20 +146,6 @@ export class WindowService {
     } else {
       mainWindow.loadURL(this.mainWindowProtocol.getLoadUrl());
     }
-
-    return mainWindow;
-  }
-
-  setupProtocolHandler(): void {
-    this.mainWindowProtocol.setupHandler();
-  }
-
-  getAllWindows(): BrowserWindow[] {
-    return BrowserWindow.getAllWindows();
-  }
-
-  getFocusedWindow(): BrowserWindow | null {
-    return BrowserWindow.getFocusedWindow();
   }
 }
 

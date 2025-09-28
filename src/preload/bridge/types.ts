@@ -12,7 +12,6 @@ declare global {
       save: (data: string) => void;
       log: (message: string, level?: 'info' | 'warn' | 'error') => void;
       notify: (title: string, message: string) => void;
-      add: (x: number, y: number) => Promise<number>;
       getSystemInfo: () => Promise<{
         platform: string;
         timestamp: number;

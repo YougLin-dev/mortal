@@ -28,6 +28,7 @@
     "paths": {
       "@/main/*": ["src/main/*"],
       "@/shared/*": ["src/shared/*"],
+      "@/preload/*": ["src/preload/*"],
       "@/vite-plugins/*": ["vite-plugins/*"],
     }
   },

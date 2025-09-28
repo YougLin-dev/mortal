@@ -1,6 +1,6 @@
 import { contextBridge } from 'electron';
 
-import { initPreloadBridge, globalEmitter, setupEventForwarding } from './preload-bridge-generator';
+import { initPreloadBridge, globalEmitter, setupEventForwarding } from './bridge/generator';
 import { electronAPI } from '@electron-toolkit/preload';
 import { getArgumentValue } from '@/shared/utils/preload-utils';
 import type { WindowState } from '@/shared/types/window';

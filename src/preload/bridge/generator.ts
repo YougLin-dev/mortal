@@ -7,7 +7,7 @@ import mitt, { type Emitter } from 'mitt';
 import type { CollectedMetadata } from '@/vite-plugins/metadata';
 import { GLOBAL_EVENTS } from '@/shared/types/event';
 import { camelCase } from 'es-toolkit';
-import { ipcEventRouter } from './ipc-event-router';
+import { ipcEventRouter } from '@/preload/ipc/router';
 
 export const globalEmitter: Emitter<any> = mitt();
 export function setupEventForwarding() {

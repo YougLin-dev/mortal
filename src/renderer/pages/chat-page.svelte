@@ -38,20 +38,6 @@
     }
   }
 
-  // CALL 测试方法
-  async function testAdd() {
-    if (typeof window !== 'undefined' && window.systemService) {
-      try {
-        const result = await window.systemService.add(15, 25);
-        addResult('info', `Add result: 15 + 25 = ${result}`);
-      } catch (error) {
-        addResult('error', `Add error: ${error}`);
-      }
-    } else {
-      addResult('error', 'systemService not available');
-    }
-  }
-
   async function testMultiply() {
     if (typeof window !== 'undefined' && window.systemService) {
       try {
@@ -123,7 +109,6 @@
           <h3 class="text-lg font-medium text-muted-foreground">CALL Methods (调用并等待结果)</h3>
         </div>
         <div class="grid grid-cols-1 gap-3 md:grid-cols-2">
-          <Button onclick={testAdd} variant="outline" class="w-full">Test Add</Button>
           <Button onclick={testMultiply} variant="outline" class="w-full">Test Multiply</Button>
           <Button onclick={testSystemInfo} variant="outline" class="w-full">Test System Info</Button>
           <Button onclick={testFetchUser} variant="outline" class="w-full">Test Fetch User</Button>

@@ -1,7 +1,7 @@
 import type { InternalWindowState, WindowState } from '@/shared/types/window';
 import type { BrowserWindow } from 'electron';
 import { screen } from 'electron';
-import { storage } from '@/main/storage';
+import { storage } from '@/main/core/storage/config';
 import { STORAGES } from '@/shared/types/storage-key';
 
 export interface WindowStateManagerOptions {

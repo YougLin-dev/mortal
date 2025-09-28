@@ -4,7 +4,7 @@ import { Handler, Service } from '@/shared/decorators';
 import { TITLE_BAR_OVERLAY } from '@/shared/consts/ui';
 import type { ThemeType } from '@/shared/types/theme';
 import { STORAGES } from '@/shared/types/storage-key';
-import { storage } from '@/main/storage';
+import { storage } from '@/main/core/storage/config';
 
 @Service
 export class ThemeService {
