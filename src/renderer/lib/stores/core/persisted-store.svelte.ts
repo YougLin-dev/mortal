@@ -71,7 +71,22 @@ function proxy<T>(
   return p as T;
 }
 
-export class ElectronStore<T extends StorageValue> {
+/**
+ * PersistedStore provides reactive state management with automatic persistence to Electron storage.
+ *
+ * Features:
+ * - Deep reactivity using Proxies
+ * - Automatic persistence to Electron storage
+ * - Optimistic updates with queueing
+ * - Hydration from storage on initialization
+ *
+ * @example
+ * ```ts
+ * const store = new PersistedStore('my-key', { count: 0 });
+ * store.current.count++; // Automatically persisted
+ * ```
+ */
+export class PersistedStore<T extends StorageValue> {
   #current: T | undefined;
   #key: string;
   #storage?: ElectronStorageAdapter<T>;
@@ -110,6 +125,10 @@ export class ElectronStore<T extends StorageValue> {
     this.#current = newValue;
     this.#store(newValue);
     this.#update?.();
+  }
+
+  get key(): string {
+    return this.#key;
   }
 
   async #hydratePersistState(key: string, initialValue: T): Promise<void> {

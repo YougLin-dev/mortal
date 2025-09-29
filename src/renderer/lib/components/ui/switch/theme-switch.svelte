@@ -2,20 +2,20 @@
   import SunIcon from '@lucide/svelte/icons/sun';
   import MoonIcon from '@lucide/svelte/icons/moon';
   import { Button, type ButtonProps } from '$lib/components/ui/button';
-  import { transitionState, toggleTheme } from '$lib/stores/theme.state.svelte';
+  import { themeStore } from '$lib/stores/theme.store.svelte';
   import { cn } from '$lib/utils';
 
   const { class: className, style = undefined }: ButtonProps = $props();
 </script>
 
 <Button
-  onclick={toggleTheme}
+  onclick={() => themeStore.toggle()}
   variant="ghost"
   size="icon"
   {style}
   class={cn(
     'rounded-full transition-none hover:bg-[#E8E8E8] hover:dark:bg-[#2C2C2C]',
-    transitionState.isTransitioning && 'hover:bg-transparent hover:dark:bg-transparent',
+    themeStore.isTransitioning && 'hover:bg-transparent hover:dark:bg-transparent',
     className
   )}
 >

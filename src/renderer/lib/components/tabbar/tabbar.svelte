@@ -18,14 +18,14 @@
   import { flip } from 'svelte/animate';
   import TabItem from './tabbar-item.svelte';
   import type { Tab } from '@/shared/types/window';
-  import { TabsManager } from '$lib/stores/window.state.svelte';
+  import { windowStore } from '$lib/stores/window.store.svelte';
 
   let { class: className, autoStretch = false }: Props = $props();
 
   let draggedElementId = $state<string | null>(null);
 
   function handleNewTab() {
-    TabsManager.addNewEmptyTab();
+    windowStore.addTab();
   }
 
   function handleDndConsider(e: CustomEvent<TabDndEvent>) {
@@ -34,16 +34,16 @@
 
     if (info.trigger === TRIGGERS.DRAG_STARTED) {
       draggedElementId = info.id;
-      TabsManager.reorderTabs(newItems, draggedElementId);
+      windowStore.reorderTabs(newItems, draggedElementId);
     }
     if (info.trigger === TRIGGERS.DRAGGED_OVER_INDEX) {
-      TabsManager.reorderTabs(newItems, draggedElementId);
+      windowStore.reorderTabs(newItems, draggedElementId);
     }
   }
 
   function handleDndFinalize(e: CustomEvent<TabDndEvent>) {
     try {
-      TabsManager.reorderTabs(e.detail.items, draggedElementId);
+      windowStore.reorderTabs(e.detail.items, draggedElementId);
       draggedElementId = null;
     } catch (error) {
       console.error('Error finalizing drag operation:', error);
@@ -73,7 +73,7 @@
       window.isMac && 'pl-[80px]'
     )}
     use:dndzone={{
-      items: TabsManager.tabs,
+      items: windowStore.tabs,
       flipDurationMs: 200,
       dropTargetStyle: {},
       transformDraggedElement,
@@ -85,11 +85,11 @@
     onconsider={handleDndConsider}
     onfinalize={handleDndFinalize}
   >
-    {#each TabsManager.tabs as tab, index (tab.id)}
-      {@const isCurrentActive = tab.id === TabsManager.activeTabId}
-      {@const nextTab = TabsManager.tabs[index + 1]}
-      {@const isNextActive = nextTab?.id === TabsManager.activeTabId}
-      {@const isLastTab = index === TabsManager.tabs.length - 1}
+    {#each windowStore.tabs as tab, index (tab.id)}
+      {@const isCurrentActive = tab.id === windowStore.activeTabId}
+      {@const nextTab = windowStore.tabs[index + 1]}
+      {@const isNextActive = nextTab?.id === windowStore.activeTabId}
+      {@const isLastTab = index === windowStore.tabs.length - 1}
       {@const shouldShowSeparator = !isLastTab && !isCurrentActive && !isNextActive}
       <div
         class={cn('flex min-w-0 items-center', autoStretch && 'flex-1 basis-0')}
@@ -102,9 +102,9 @@
           {tab}
           stretch={autoStretch}
           closable={true}
-          onTabClick={() => TabsManager.clickTab(tab.id)}
-          onTabClose={() => TabsManager.removeTab(tab.id)}
-          onTabCloseAll={() => TabsManager.removeAllTabs()}
+          onTabClick={() => windowStore.activateTab(tab.id)}
+          onTabClose={() => windowStore.removeTab(tab.id)}
+          onTabCloseAll={() => windowStore.removeAllTabs()}
         />
         <div class="shrink-0 px-0.5" style="cursor: pointer !important;">
           <Separator
@@ -118,7 +118,7 @@
     <div class="flex shrink-0 items-center self-end">
       <Separator
         orientation="vertical"
-        class={cn('mx-0.5 !h-[20px] !w-0.5', TabsManager.tabs.length === 0 ? 'opacity-0' : 'opacity-100')}
+        class={cn('mx-0.5 !h-[20px] !w-0.5', windowStore.tabs.length === 0 ? 'opacity-0' : 'opacity-100')}
         style="cursor: none !important;"
       />
       <TooltipButton
