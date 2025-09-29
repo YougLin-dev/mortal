@@ -1,6 +1,8 @@
 import { ElectronStore } from '$lib/hooks/electron-store.svelte';
+import { watchRoot } from '$lib/hooks/watch.svelte';
 import { STORAGES } from '@/shared/types/storage-key';
 import type { Tab, WindowState } from '@/shared/types/window';
+import { goto } from '@mateothegreat/svelte5-router';
 import { nanoid } from 'nanoid';
 import superjson from 'superjson';
 
@@ -15,21 +17,25 @@ export const TabsManager = {
   get activeTabId() {
     return windowStore.current.tabs.find((tab) => tab.isActive)?.id;
   },
+  get activeTab() {
+    return windowStore.current.tabs.find((tab) => tab.isActive);
+  },
   set tabs(tabs: Tab[]) {
     windowStore.current.tabs = tabs;
   },
   addNewEmptyTab: () => {
+    const newTabId = nanoid(6);
     TabsManager.tabs = windowStore.current.tabs
       .map((tab) => ({
         ...tab,
         isActive: false
       }))
       .concat({
-        id: nanoid(),
-        name: 'New Tab',
+        id: newTabId,
+        name: 'New Tab' + newTabId,
         isActive: true,
         pinned: false,
-        url: 'about:blank'
+        url: '/chat/' + newTabId
       });
   },
   clickTab: (tabId: string) => {
@@ -73,3 +79,17 @@ export const toggleAlwaysOnTop = async () => {
     console.error('Failed to toggle always on top:', error);
   }
 };
+
+let previousActiveTabUrl: string | undefined;
+
+watchRoot(() => {
+  const currentActiveTabUrl = TabsManager.activeTab?.url || '/welcome';
+
+  if (previousActiveTabUrl !== currentActiveTabUrl) {
+    console.log('  ✅ URL changed, executing goto:', currentActiveTabUrl);
+    goto(currentActiveTabUrl);
+    previousActiveTabUrl = currentActiveTabUrl;
+  } else {
+    console.log('  ❌ URL unchanged, skipping goto');
+  }
+});

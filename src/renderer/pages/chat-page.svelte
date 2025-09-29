@@ -2,8 +2,8 @@
   import Button from '$lib/components/ui/button/button.svelte';
   import EnhancedScrollbar from '$lib/components/ui/scroll-area/enhanced-scrollbar.svelte';
   import { cn } from '$lib/utils';
-  import { route } from '@mateothegreat/svelte5-router';
-  let results: Array<{ timestamp: string; type: 'info' | 'error'; message: string }> = [];
+  import { route, type RouteResult } from '@mateothegreat/svelte5-router';
+  let results: Array<{ timestamp: string; type: 'info' | 'error'; message: string }> = $state([]);
 
   function addResult(type: 'info' | 'error', message: string) {
     const timestamp = new Date().toLocaleTimeString();
@@ -77,15 +77,19 @@
       addResult('error', 'systemService not available');
     }
   }
+  let { route: r }: { route: RouteResult } = $props();
 </script>
 
 <div class="p-6">
   <div class="mx-auto max-w-4xl space-y-8">
     <!-- Header -->
     <div class="space-y-4 text-center">
-      <h1 class="text-4xl font-bold tracking-tight">Mortal AI Test</h1>
-      <a use:route href="/settings" class="bg-primary text-primary-foreground hover:bg-primary/90">Welcome Page</a>
+      <h1 class="text-4xl font-bold tracking-tight">Mortal AI Test : {r.result.path.params?.['id']}</h1>
+      <a use:route href="/settings" class="bg-primary text-primary-foreground hover:bg-primary/90">setting Page</a>
+      <a use:route href="/welcome" class="bg-primary text-primary-foreground hover:bg-primary/90">Welcome Page</a>
     </div>
+    <div class="">Window State: {JSON.stringify(window.windowState)}</div>
+    <div>{window.isMac}</div>
 
     <!-- IPC Test Suite -->
     <div class="space-y-6 rounded-lg border bg-card p-6">
