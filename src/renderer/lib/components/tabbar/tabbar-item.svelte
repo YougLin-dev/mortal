@@ -36,10 +36,10 @@
     tabindex={0}
   >
     <div class="contents">
-      <span class="max-w-48 min-w-0 flex-1 truncate">{tab.name}</span>
+      <span class="max-w-48 min-w-0 flex-1 truncate select-none">{tab.name}</span>
       {#if closable}
         <TooltipButton
-          tooltip={tab.name}
+          tooltip="关闭标签页"
           side="bottom"
           variant="ghost"
           size="icon"

@@ -135,6 +135,7 @@ class WindowStore {
    * Activate a tab by ID
    */
   activateTab(tabId: string): void {
+    console.log('Activating tab:', tabId);
     this.tabs = this.tabs.map((tab) => ({
       ...tab,
       isActive: tab.id === tabId
@@ -161,18 +162,13 @@ class WindowStore {
    * @param draggedElementId - ID of the dragged tab (will be activated)
    */
   reorderTabs(newOrder: Tab[], draggedElementId?: string | null): void {
-    const currentTabs = this.tabs;
-    const hasChanges = newOrder.length !== currentTabs.length || newOrder.some((item, index) => item !== currentTabs[index]);
-
-    if (hasChanges) {
-      if (draggedElementId) {
-        newOrder = newOrder.map((tab) => ({
-          ...tab,
-          isActive: tab.id === draggedElementId
-        }));
-      }
-      this.tabs = newOrder;
+    if (draggedElementId) {
+      newOrder = newOrder.map((tab) => ({
+        ...tab,
+        isActive: tab.id === draggedElementId
+      }));
     }
+    this.tabs = newOrder;
   }
 
   // ============================================================================
