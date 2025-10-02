@@ -42,7 +42,7 @@
 
   --titlebar: #f4f3f2;
   --tabbar-foreground: #474747;
-  --tabbar-accent: #c7c7c7;
+  --tabbar-accent: #e8e8e8;
   --tabbar-accent-foreground: #1f1f1f;
   --tabbar-active: #ffffff;
   --tabbar-active-foreground: #1f1f1f;
@@ -134,6 +134,8 @@
 
   --spacing-titlebar-w: env(titlebar-area-width, 100%);
   --spacing-titlebar-h: env(titlebar-area-height, 46px);
+  --spacing-titlebar-area-x: env(titlebar-area-x, 0px);
+  --spacing-titlebar-area-y: env(titlebar-area-y, 0px);
 
   --color-titlebar: var(--titlebar);
   --color-tabbar-foreground: var(--tabbar-foreground);
