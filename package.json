@@ -83,7 +83,6 @@
     "electron-squirrel-startup": "^1.0.1",
     "es-toolkit": "^1.39.10",
     "mitt": "^3.0.1",
-    "nanoid": "^5.1.6",
-    "svelte-dnd-action": "^0.9.65"
+    "nanoid": "^5.1.6"
   }
 }
