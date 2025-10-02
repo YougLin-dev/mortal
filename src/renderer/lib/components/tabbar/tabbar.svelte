@@ -15,7 +15,21 @@
   import { cn } from '$lib/utils';
   import { Plus } from '@lucide/svelte';
   import { dndzone } from '$lib/dnd';
-  import { flip } from 'svelte/animate';
+  import { cubicOut } from 'svelte/easing';
+
+  function slideExpand(node: Element, { duration = 300, easing = cubicOut } = {}) {
+    const originalWidth = node.scrollWidth;
+
+    return {
+      duration,
+      easing,
+      css: (t: number) => `
+        max-width: ${t * originalWidth}px;
+        opacity: ${Math.min(t * 1.5, 1)};
+        overflow: hidden;
+      `
+    };
+  }
   import TabItem from './tabbar-item.svelte';
   import type { Tab } from '@/shared/types/window';
   import { windowStore } from '$lib/stores/window.store.svelte';
@@ -61,7 +75,8 @@
         data-id={tab.id}
         role="presentation"
         aria-label={tab.name}
-        animate:flip={{ duration: 200 }}
+        in:slideExpand={{ duration: 300, easing: cubicOut }}
+        out:slideExpand={{ duration: 200, easing: cubicOut }}
       >
         <TabItem
           {tab}
