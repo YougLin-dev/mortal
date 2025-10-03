@@ -50,6 +50,7 @@ declare global {
     events: Emitter<GlobalEventDataMap>;
     windowState: WindowState;
     isMac: boolean;
+    locale: string;
   }
 }
 

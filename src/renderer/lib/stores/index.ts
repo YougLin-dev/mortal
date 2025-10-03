@@ -16,3 +16,4 @@ export type { IStore, IPersistedStore } from './core/types';
 // Store instances
 export { windowStore } from './window.store.svelte';
 export { themeStore } from './theme.store.svelte';
+export { i18nStore } from '../i18n';

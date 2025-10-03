@@ -7,6 +7,8 @@ import { TITLE_BAR_OVERLAY, WIN } from '@/shared/consts/ui';
 import { platform } from '@electron-toolkit/utils';
 import { WindowStateManager } from '@/main/services/window/window-state-manager';
 import { toArgument } from '@/shared/utils/preload-utils';
+import { storage } from '@/main/core/storage/config';
+import { STORAGES } from '@/shared/types/storage-key';
 
 @Service
 export class WindowService {
@@ -89,7 +91,11 @@ export class WindowService {
         contextIsolation: true,
         allowRunningInsecureContent: false,
         experimentalFeatures: false,
-        additionalArguments: [toArgument('windowState', mainWindowState.windowState), toArgument('isMac', platform.isMacOS)]
+        additionalArguments: [
+          toArgument('windowState', mainWindowState.windowState),
+          toArgument('isMac', platform.isMacOS),
+          toArgument('locale', storage.getSync(STORAGES.APP_I18N_LOCALE))
+        ]
       },
       icon: path.join(import.meta.dirname, './resources/images/icon.png')
     });

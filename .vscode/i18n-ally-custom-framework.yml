@@ -1,0 +1,40 @@
+# i18n Ally Custom Framework Configuration
+# For i18nStore-based implementation using Svelte 5 runes
+
+# Supported file types
+languageIds:
+  - javascript
+  - typescript
+  - svelte
+  - javascriptreact
+  - typescriptreact
+
+# RegEx patterns to detect key usage
+# Matches patterns like:
+# - t("common.welcome")
+# - t('test.title')
+# - t(`settings.language.label`)
+# - t("user.greeting", { name: "Alice" })
+# - i18nStore.t("common.welcome")
+usageMatchRegex:
+  # Primary pattern: t("key") or t("key", {...})
+  - "[^\\w\\d]t\\(['\"`]({key})['\"`]"
+  # Store pattern: i18nStore.t("key") or i18nStore.t("key", {...})
+  - "i18nStore\\.t\\(['\"`]({key})['\"`]"
+
+# Scope detection for createNamespacedT('namespace')
+# This tells i18n Ally that when it sees createNamespacedT('test'),
+# all subsequent t('key') calls should be prefixed with 'test.'
+scopeRangeRegex: "createNamespacedT\\(['\"`](.*?)['\"`]\\)"
+
+# Refactor templates for quick actions
+# These templates will be used when you want to extract hardcoded strings
+refactorTemplates:
+  - "t('$1')"
+  - "{t('$1')}"
+  - "t('$1', { $2 })"
+  - "i18nStore.t('$1')"
+
+# Enable monopoly mode to disable built-in frameworks
+# This ensures i18n Ally only uses our custom configuration
+monopoly: true

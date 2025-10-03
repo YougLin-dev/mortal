@@ -7,6 +7,7 @@ import type { WindowState } from '@/shared/types/window';
 
 const windowState = getArgumentValue<WindowState>('windowState');
 const isMac = getArgumentValue<boolean>('isMac');
+const locale = getArgumentValue<string>('locale');
 
 setupEventForwarding();
 
@@ -23,3 +24,4 @@ contextBridge.exposeInMainWorld('events', globalEmitter);
 contextBridge.exposeInMainWorld('electron', electronAPI);
 contextBridge.exposeInMainWorld('windowState', windowState);
 contextBridge.exposeInMainWorld('isMac', isMac);
+contextBridge.exposeInMainWorld('locale', locale);

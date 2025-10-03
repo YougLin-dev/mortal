@@ -3,12 +3,14 @@ import type { WindowState } from './window';
 
 export const STORAGES = {
   APP_THEME_STATE: 'app:theme:state',
+  APP_I18N_LOCALE: 'app:i18n:locale',
   APP_WINDOWS: (windowId: string) => `app:windows:${windowId}` as const
 } as const;
 
 export type APPStorage = {
   items: {
     [STORAGES.APP_THEME_STATE]: ThemeState;
+    [STORAGES.APP_I18N_LOCALE]: string;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     [key: string]: any;
   } & {

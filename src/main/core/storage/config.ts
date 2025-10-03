@@ -7,6 +7,7 @@ import { app, nativeTheme } from 'electron';
 import { join } from 'path';
 import { cwd } from 'process';
 import { nanoid } from 'nanoid';
+import { detectAppLocale } from '@/shared/utils/locale';
 
 const devStoragePath = join(cwd(), 'data/storage');
 const storagePath = is.dev ? devStoragePath : join(app.getPath('userData'), 'storage');
@@ -51,6 +52,13 @@ export const storage = createStorage<APPStorage>({
             }
           ]
         });
+      }
+
+      // init locale state
+      const localeState = await s.getItem(STORAGES.APP_I18N_LOCALE);
+      if (localeState == null) {
+        const appLocale = detectAppLocale('en');
+        await s.setItem(STORAGES.APP_I18N_LOCALE, appLocale);
       }
     }
   },
