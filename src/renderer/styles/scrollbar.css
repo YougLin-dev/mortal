@@ -1,16 +1,16 @@
 /* Scrollbar CSS Variables */
 :root {
-  --color-scrollbar-thumb-dark: rgba(255, 255, 255, 0.15);
-  --color-scrollbar-thumb-dark-hover: rgba(255, 255, 255, 0.2);
-  --color-scrollbar-thumb-light: rgba(0, 0, 0, 0.15);
-  --color-scrollbar-thumb-light-hover: rgba(0, 0, 0, 0.2);
+  --color-scrollbar-thumb-dark: #2f2f2f;
+  --color-scrollbar-thumb-dark-hover: #3b3b3b;
+  --color-scrollbar-thumb-light: #d9d9d9;
+  --color-scrollbar-thumb-light-hover: #cccccc;
 
   --color-scrollbar-thumb: var(--color-scrollbar-thumb-light);
   --color-scrollbar-thumb-hover: var(--color-scrollbar-thumb-light-hover);
 
-  --scrollbar-width: 0.5rem;
-  --scrollbar-height: 0.5rem;
-  --scrollbar-thumb-radius: 10px;
+  --scrollbar-width: calc(var(--spacing) * 2);
+  --scrollbar-height: calc(var(--spacing) * 2);
+  --scrollbar-thumb-radius: var(--radius-md);
 }
 
 .dark {

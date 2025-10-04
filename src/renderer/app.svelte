@@ -24,6 +24,9 @@
 </script>
 
 <TitleBar />
-<ScrollAreaEnhanced class="mt-titlebar-h h-[calc(100vh-var(--spacing-titlebar-h))] overflow-auto bg-background" style="app-region: no-drag;">
+<ScrollAreaEnhanced
+  class="mx-1.5 mt-titlebar-h h-[calc(100vh-var(--spacing-titlebar-h)-var(--spacing)*1.5)] rounded-md bg-background p-4 shadow-md"
+  style="app-region: no-drag;"
+>
   <Router {routes} />
 </ScrollAreaEnhanced>
