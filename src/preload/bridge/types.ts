@@ -5,6 +5,7 @@ import type { ThemeType } from '@/shared/types/theme';
 import type { StorageMetadata, StorageOptions, StorageItem } from '@/shared/types/storage';
 import type { StorageValue } from 'electron-async-storage';
 import type { WindowState } from '@/shared/types/window';
+import type { IpcResponse, StreamController } from '@/shared/types/router';
 
 declare global {
   interface Window {
@@ -46,6 +47,9 @@ declare global {
       setItems: (items: StorageItem[]) => Promise<void>;
     };
 
+    _ipcFetchRaw: (url: string, init?: RequestInit) => Promise<IpcResponse>;
+    _createStreamController: (streamId: string) => StreamController;
+    ipcFetch: (url: string, init?: RequestInit) => Promise<Response>;
     electron: ElectronAPI;
     events: Emitter<GlobalEventDataMap>;
     windowState: WindowState;

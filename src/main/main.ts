@@ -3,6 +3,7 @@ import './services';
 import { app, BrowserWindow } from 'electron';
 import started from 'electron-squirrel-startup';
 import { setupIPC } from './core/ipc/setup';
+import { setupRouter } from './core/router/setup';
 import { storage } from './core/storage/config';
 import { WindowStateManager } from './services/window/window-state-manager';
 import { windowService } from './services/window/window-service';
@@ -37,6 +38,7 @@ if (!gotTheLock) {
     await storage.migrate();
 
     setupIPC();
+    setupRouter();
 
     windowService.setupProtocolHandler();
 

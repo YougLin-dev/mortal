@@ -1,5 +1,5 @@
 import type { IpcMainInvokeEvent } from 'electron';
-import { Handler, Service } from '@/shared/decorators';
+import { Handler, Service, Route } from '@/shared/decorators';
 import * as fs from 'fs';
 
 @Service
@@ -54,6 +54,40 @@ export class SystemService {
     const result = x * y;
     console.log(`Computing ${x} × ${y} = ${result} for PID:${event.processId}`);
     return result;
+  }
+
+  @Route('POST', '/api/stream-count')
+  async streamCountRoute(request: Request): Promise<Response> {
+    const { max = 10 } = await request.json();
+
+    const stream = new ReadableStream({
+      async start(controller) {
+        try {
+          const encoder = new TextEncoder();
+          for (let i = 1; i <= max; i++) {
+            await new Promise((resolve) => setTimeout(resolve, 500));
+            const data = JSON.stringify({ count: i, timestamp: Date.now() });
+            controller.enqueue(encoder.encode(data + '\n'));
+          }
+          controller.close();
+        } catch (err) {
+          controller.error(err);
+        }
+      }
+    });
+
+    return new Response(stream, {
+      status: 200,
+      headers: {
+        'Content-Type': 'application/x-ndjson',
+        'Transfer-Encoding': 'chunked'
+      }
+    });
+  }
+
+  @Route('GET', '/api/hello')
+  async helloRoute(_request: Request): Promise<Response> {
+    return Response.json({ message: 'Hello from IPC Router!', timestamp: Date.now() });
   }
 }
 

@@ -2,10 +2,12 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 import { camelCase } from 'es-toolkit';
+import type { HTTPMethod, RouteMetadata } from './types/router';
 
 // @ts-expect-error ployfill
 Symbol.metadata ??= Symbol('Symbol.metadata');
 export const HANDLERS = Symbol('HANDLERS');
+export const ROUTES = Symbol('ROUTES');
 export const SERVICE_NAME = Symbol('SERVICE_NAME');
 
 export function Handler(originalMethod: Function, context: ClassMethodDecoratorContext) {
@@ -15,6 +17,22 @@ export function Handler(originalMethod: Function, context: ClassMethodDecoratorC
 
   return function (this: any, ...args: any[]) {
     return originalMethod.apply(this, args);
+  };
+}
+
+export function Route(method: HTTPMethod, path: string) {
+  return function (originalMethod: Function, context: ClassMethodDecoratorContext) {
+    const metadata = context.metadata as any;
+    metadata[ROUTES] ??= [];
+    metadata[ROUTES].push({
+      method: method.toUpperCase(),
+      path,
+      handler: originalMethod
+    });
+
+    return function (this: any, ...args: any[]) {
+      return originalMethod.apply(this, args);
+    };
   };
 }
 
@@ -30,6 +48,14 @@ export function getHandlers<T extends Function>(T: T): Record<string, Function> 
     return undefined;
   }
   return metadata[HANDLERS];
+}
+
+export function getRoutes<T extends Function>(T: T): Array<RouteMetadata> | undefined {
+  const metadata = T[Symbol.metadata] as any;
+  if (!metadata) {
+    return undefined;
+  }
+  return metadata[ROUTES];
 }
 
 export function getServiceName<T extends Function>(T: T): string | undefined {
