@@ -146,7 +146,21 @@ class WindowStore {
    * Remove a tab by ID
    */
   removeTab(tabId: string): void {
+    const removedTabIndex = this.tabs.findIndex((tab) => tab.id === tabId);
+    const wasActive = this.tabs[removedTabIndex]?.isActive;
+
+    // Remove the tab
     this.tabs = this.tabs.filter((tab) => tab.id !== tabId);
+
+    // If the removed tab was active and there are still tabs left, activate another one
+    if (wasActive && this.tabs.length > 0) {
+      // Activate the tab at the same index, or the previous one if we're at the end
+      const newActiveIndex = Math.min(removedTabIndex, this.tabs.length - 1);
+      this.tabs = this.tabs.map((tab, index) => ({
+        ...tab,
+        isActive: index === newActiveIndex
+      }));
+    }
   }
 
   /**
