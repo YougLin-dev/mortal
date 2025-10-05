@@ -8,6 +8,9 @@ import { join } from 'path';
 import { cwd } from 'process';
 import { nanoid } from 'nanoid';
 import { detectAppLocale } from '@/shared/utils/locale';
+import { getLoggerBy } from '@/shared/logging/helpers';
+
+const logger = getLoggerBy('storage', 'migration');
 
 const devStoragePath = join(cwd(), 'data/storage');
 const storagePath = is.dev ? devStoragePath : join(app.getPath('userData'), 'storage');
@@ -64,10 +67,10 @@ export const storage = createStorage<APPStorage>({
   },
   migrationHooks: {
     afterMigration: (fromVersion, toVersion) => {
-      console.log(`Success migration from ${fromVersion} to ${toVersion}`);
+      logger.info('Success migration {from}->{to}', { from: fromVersion, to: toVersion });
     },
     onMigrationError(error, fromVersion, toVersion) {
-      console.error(`Error migrating from ${fromVersion} to ${toVersion}`, error);
+      logger.error('Error migrating {from}->{to}: {error}', { from: fromVersion, to: toVersion, error });
     }
   }
 });

@@ -3,6 +3,9 @@ import type { BrowserWindow } from 'electron';
 import { screen } from 'electron';
 import { storage } from '@/main/core/storage/config';
 import { STORAGES } from '@/shared/types/storage-key';
+import { getLoggerBy } from '@/shared/logging/helpers';
+
+const logger = getLoggerBy('service', 'window', 'state');
 
 export interface WindowStateManagerOptions {
   windowId: string;
@@ -50,7 +53,7 @@ export class WindowStateManager {
         this.validateState();
       }
     } catch (error) {
-      console.warn(`Failed to load window state for ${this.options.windowId}:`, error);
+      logger.warn('Failed to load window state, windowId = {windowId}, error = {error}', { windowId: this.options.windowId, error });
     }
   }
 
@@ -131,7 +134,7 @@ export class WindowStateManager {
       this.state.isFullScreen = window.isFullScreen();
       this.state.displayBounds = screen.getDisplayMatching(winBounds).bounds;
     } catch (error) {
-      console.warn('Failed to update window state:', error);
+      logger.warn('Failed to update window state: {error}', { error });
     }
   }
 
@@ -152,7 +155,7 @@ export class WindowStateManager {
       this.state = nextState;
       storage.setItemSync(this.storageKey, nextState);
     } catch (error) {
-      console.warn(`Failed to save window state for ${this.options.windowId}:`, error);
+      logger.warn('Failed to save window state, windowId = {windowId}, error = {error}', { windowId: this.options.windowId, error });
     }
   }
 

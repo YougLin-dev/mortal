@@ -2,27 +2,40 @@
 import { ipcMain, type IpcMainEvent } from 'electron';
 import { getRoutes, getServiceName } from '@/shared/decorators';
 import { services } from '@/main/services';
-import type { IpcRequest, IpcResponse, IpcStreamChunk, IpcStreamEnd, IpcStreamError } from '@/shared/types/router';
+import type {
+  IpcRequest,
+  IpcResponse,
+  IpcStreamChunk,
+  IpcStreamEnd,
+  IpcStreamError,
+  IpcAbortRequest,
+  SerializedBody,
+  JsonValue
+} from '@/shared/types/router';
 import {
   FETCH_REQUEST_CHANNEL,
   FETCH_RESPONSE_CHANNEL,
   FETCH_STREAM_DATA_CHANNEL,
   FETCH_STREAM_END_CHANNEL,
-  FETCH_STREAM_ERROR_CHANNEL
+  FETCH_STREAM_ERROR_CHANNEL,
+  FETCH_ABORT_CHANNEL
 } from '@/shared/types/fetch';
+import { getIpcRouterLogger } from '@/shared/logging/helpers';
+
+const logger = getIpcRouterLogger().getChild('setup');
 
 interface RouteEntry {
   method: string;
   path: string;
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-function-type
   handler: Function;
   service: any;
 }
 
 const routes: RouteEntry[] = [];
 
+const activeStreams = new Map<string, AbortController>();
+
 export function setupRouter() {
-  // Collect all routes from services
   services.forEach((service) => {
     const Service = service.constructor;
     const serviceRoutes = getRoutes(Service);
@@ -41,11 +54,15 @@ export function setupRouter() {
         handler: method.bind(service),
         service
       });
-      console.log(`Registered route: ${route.method} ${route.path} -> ${serviceName}.${route.handler.name}`);
+      logger.info('Registered route {method} {path} -> {service}.{handler}', {
+        method: route.method,
+        path: route.path,
+        service: serviceName,
+        handler: route.handler.name
+      });
     }
   });
 
-  // Register IPC handlers for routing
   ipcMain.on(FETCH_REQUEST_CHANNEL, async (event: IpcMainEvent, ipcRequest: IpcRequest) => {
     try {
       const route = findRoute(ipcRequest.method, ipcRequest.url);
@@ -61,46 +78,35 @@ export function setupRouter() {
         return;
       }
 
-      // Construct standard Request object
+      const abortController = new AbortController();
+      activeStreams.set(ipcRequest.id, abortController);
+
       const fullUrl = `http://localhost${ipcRequest.url}`;
+      const body = typeof ipcRequest.body === 'string' ? ipcRequest.body : ipcRequest.body != null ? JSON.stringify(ipcRequest.body) : undefined;
+
+      const requestHeaders = new Headers(ipcRequest.headers);
+      if (body && ipcRequest.body && typeof ipcRequest.body !== 'string' && !requestHeaders.has('Content-Type')) {
+        requestHeaders.set('Content-Type', 'application/json');
+      }
+
       const request = new Request(fullUrl, {
         method: ipcRequest.method,
-        headers: new Headers(ipcRequest.headers),
-        body: ipcRequest.body ? JSON.stringify(ipcRequest.body) : undefined
+        headers: requestHeaders,
+        body,
+        signal: abortController.signal
       });
 
-      // Call handler with standard Request
       const response: Response = await route.handler(request);
 
-      // Check if response body is a ReadableStream
       if (response.body && typeof response.body.getReader === 'function') {
+        logger.debug('Handling stream response {id}', { id: ipcRequest.id });
         await handleStreamResponse(event, ipcRequest.id, response);
       } else {
-        // Regular response
-        const headers: Record<string, string> = {};
-        response.headers.forEach((value, key) => {
-          headers[key] = value;
-        });
-
-        const contentType = response.headers.get('Content-Type') || '';
-        let body: any;
-
-        if (contentType.includes('application/json')) {
-          body = await response.json();
-        } else {
-          body = await response.text();
-        }
-
-        sendResponse(event, {
-          id: ipcRequest.id,
-          status: response.status,
-          statusText: response.statusText,
-          headers,
-          body
-        });
+        await handleRegularResponse(event, ipcRequest.id, response);
       }
     } catch (error) {
-      console.error('Router error:', error);
+      logger.error('Router error: {error}', { error });
+      activeStreams.delete(ipcRequest.id);
       sendResponse(event, {
         id: ipcRequest.id,
         status: 500,
@@ -110,6 +116,17 @@ export function setupRouter() {
           error: error instanceof Error ? error.message : String(error)
         }
       });
+    }
+  });
+
+  ipcMain.on(FETCH_ABORT_CHANNEL, (_event: IpcMainEvent, abortRequest: IpcAbortRequest) => {
+    logger.info('Abort request received {id}', { id: abortRequest.id });
+    const controller = activeStreams.get(abortRequest.id);
+    if (controller) {
+      logger.warn('Aborting stream {id}', { id: abortRequest.id });
+      controller.abort();
+    } else {
+      logger.warn('No active stream found {id}', { id: abortRequest.id });
     }
   });
 }
@@ -124,13 +141,45 @@ function sendResponse(event: IpcMainEvent, response: IpcResponse) {
   }
 }
 
+async function handleRegularResponse(event: IpcMainEvent, requestId: string, response: Response) {
+  logger.debug('Handling regular response {id}', { id: requestId });
+  const headers: Record<string, string> = {};
+  response.headers.forEach((value, key) => {
+    headers[key] = value;
+  });
+
+  const contentType = response.headers.get('Content-Type') || '';
+  let body: SerializedBody;
+
+  if (contentType.includes('application/json')) {
+    body = (await response.json()) as JsonValue;
+  } else {
+    body = await response.text();
+  }
+
+  activeStreams.delete(requestId);
+
+  sendResponse(event, {
+    id: requestId,
+    status: response.status,
+    statusText: response.statusText,
+    headers,
+    body
+  });
+}
+
 async function handleStreamResponse(event: IpcMainEvent, requestId: string, response: Response) {
   const headers: Record<string, string> = {};
   response.headers.forEach((value, key) => {
     headers[key] = value;
   });
 
-  // Send initial response headers
+  const abortController = activeStreams.get(requestId);
+  if (!abortController) {
+    logger.error('No AbortController found for request {id}', { id: requestId });
+    return;
+  }
+
   sendResponse(event, {
     id: requestId,
     status: response.status,
@@ -139,15 +188,26 @@ async function handleStreamResponse(event: IpcMainEvent, requestId: string, resp
     isStream: true
   });
 
-  // Stream the response body
   try {
     const reader = response.body!.getReader();
     const decoder = new TextDecoder();
 
     while (true) {
+      if (abortController.signal.aborted) {
+        logger.info('Stream aborted {id}', { id: requestId });
+        reader.cancel('Request aborted by client');
+        activeStreams.delete(requestId);
+        if (!event.sender.isDestroyed()) {
+          const end: IpcStreamEnd = { id: requestId };
+          event.sender.send(FETCH_STREAM_END_CHANNEL, end);
+        }
+        break;
+      }
+
       const { done, value } = await reader.read();
 
       if (done) {
+        activeStreams.delete(requestId);
         if (!event.sender.isDestroyed()) {
           const end: IpcStreamEnd = { id: requestId };
           event.sender.send(FETCH_STREAM_END_CHANNEL, end);
@@ -157,19 +217,12 @@ async function handleStreamResponse(event: IpcMainEvent, requestId: string, resp
 
       if (!event.sender.isDestroyed()) {
         const text = decoder.decode(value, { stream: true });
-        // Try to parse as JSON, otherwise send as text
-        let data: any;
-        try {
-          data = JSON.parse(text);
-        } catch {
-          data = text;
-        }
-
-        const chunk: IpcStreamChunk = { id: requestId, data };
+        const chunk: IpcStreamChunk = { id: requestId, data: text };
         event.sender.send(FETCH_STREAM_DATA_CHANNEL, chunk);
       }
     }
   } catch (error) {
+    activeStreams.delete(requestId);
     if (!event.sender.isDestroyed()) {
       const errorMsg: IpcStreamError = {
         id: requestId,

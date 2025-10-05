@@ -8,6 +8,11 @@ import { storage } from './core/storage/config';
 import { WindowStateManager } from './services/window/window-state-manager';
 import { windowService } from './services/window/window-service';
 import { platform } from '@electron-toolkit/utils';
+import { initLogging } from '@/shared/logging/config';
+import { getLoggerBy } from '@/shared/logging/helpers';
+
+initLogging('main');
+const logger = getLoggerBy('app', 'lifecycle');
 
 // Handle Squirrel events on Windows (installer/uninstaller) and quit early
 if (started) {
@@ -46,11 +51,11 @@ if (!gotTheLock) {
   });
 
   app.on('window-all-closed', async () => {
-    console.log('saving all window states before dispose');
+    logger.info('saving all window states before dispose');
     WindowStateManager.saveAllStates();
-    console.log('wait for storage dispose');
+    logger.info('wait for storage dispose');
     await storage.dispose();
-    console.log('storage disposed');
+    logger.info('storage disposed');
     if (!platform.isMacOS) {
       app.quit();
     }

@@ -59,6 +59,7 @@
     "eslint": "^9.36.0",
     "eslint-plugin-svelte": "^3.12.4",
     "lefthook": "^1.13.3",
+    "mastra": "^0.14.1",
     "mode-watcher": "^1.1.0",
     "picomatch": "^4.0.3",
     "prettier": "^3.6.2",
@@ -76,9 +77,15 @@
     "vite-plugin-static-copy": "^3.1.2"
   },
   "dependencies": {
+    "@ai-sdk/openai": "^2.0.42",
+    "@ai-sdk/svelte": "^3.0.60",
     "@electron-toolkit/preload": "^3.0.2",
     "@electron-toolkit/utils": "^4.0.0",
+    "@logtape/logtape": "^1.1.1",
+    "@logtape/pretty": "^1.1.1",
+    "@mastra/core": "^0.20.0",
     "@mateothegreat/svelte5-router": "^2.16.19",
+    "ai": "^5.0.60",
     "electron-async-storage": "^0.0.3",
     "electron-squirrel-startup": "^1.0.1",
     "es-toolkit": "^1.39.10",

@@ -9,20 +9,6 @@ import type { IpcResponse, StreamController } from '@/shared/types/router';
 
 declare global {
   interface Window {
-    systemService: {
-      save: (data: string) => void;
-      log: (message: string, level?: 'info' | 'warn' | 'error') => void;
-      notify: (title: string, message: string) => void;
-      getSystemInfo: () => Promise<{
-        platform: string;
-        timestamp: number;
-        uptime: number;
-        requesterId: number;
-      }>;
-      fetchUserData: (userId: string) => Promise<{ id: string; name: string; lastLogin: number; requesterId: number }>;
-      multiply: (x: number, y: number) => Promise<number>;
-    };
-
     themeService: {
       setTheme: (theme: ThemeType) => Promise<void>;
     };
@@ -49,6 +35,7 @@ declare global {
 
     _ipcFetchRaw: (url: string, init?: RequestInit) => Promise<IpcResponse>;
     _createStreamController: (streamId: string) => StreamController;
+    _abortIpcRequest: (requestId: string) => void;
     ipcFetch: (url: string, init?: RequestInit) => Promise<Response>;
     electron: ElectronAPI;
     events: Emitter<GlobalEventDataMap>;

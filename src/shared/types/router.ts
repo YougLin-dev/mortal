@@ -1,21 +1,22 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-
 export type HTTPMethod = 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH' | 'OPTIONS' | 'HEAD';
+
+export type JsonPrimitive = string | number | boolean | null;
+export type JsonValue = JsonPrimitive | JsonValue[] | { [key: string]: JsonValue };
+export type SerializedBody = string | JsonValue | null | undefined;
 
 export interface RouteMetadata {
   method: HTTPMethod;
   path: string;
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-function-type
+
   handler: Function;
 }
 
-// IPC data transfer interfaces
 export interface IpcRequest {
   id: string;
   method: HTTPMethod;
   url: string;
   headers: Record<string, string>;
-  body?: any;
+  body?: SerializedBody;
 }
 
 export interface IpcResponse {
@@ -23,13 +24,13 @@ export interface IpcResponse {
   status: number;
   statusText: string;
   headers: Record<string, string>;
-  body?: any;
+  body?: SerializedBody;
   isStream?: boolean;
 }
 
 export interface IpcStreamChunk {
   id: string;
-  data: any;
+  data: string;
 }
 
 export interface IpcStreamEnd {
@@ -44,8 +45,12 @@ export interface IpcStreamError {
   };
 }
 
+export interface IpcAbortRequest {
+  id: string;
+}
+
 export interface StreamController {
-  onData: (callback: (data: any) => void) => void;
+  onData: (callback: (data: string) => void) => void;
   onEnd: (callback: () => void) => void;
   onError: (callback: (error: { message: string; stack?: string }) => void) => void;
   cleanup: () => void;

@@ -1,5 +1,5 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { ipcRenderer } from 'electron';
+import type { IpcRendererEvent } from 'electron';
 import type {
   HTTPMethod,
   IpcRequest,
@@ -8,15 +8,21 @@ import type {
   IpcStreamChunk,
   IpcStreamEnd,
   IpcStreamError,
-  StreamController
+  StreamController,
+  IpcAbortRequest,
+  SerializedBody
 } from '@/shared/types/router';
 import {
   FETCH_REQUEST_CHANNEL,
   FETCH_RESPONSE_CHANNEL,
   FETCH_STREAM_DATA_CHANNEL,
   FETCH_STREAM_END_CHANNEL,
-  FETCH_STREAM_ERROR_CHANNEL
+  FETCH_STREAM_ERROR_CHANNEL,
+  FETCH_ABORT_CHANNEL
 } from '@/shared/types/fetch';
+import { getPreloadFetchLogger } from '@/shared/logging/helpers';
+
+const baseLogger = getPreloadFetchLogger();
 
 let requestId = 0;
 
@@ -24,30 +30,33 @@ function generateRequestId(): string {
   return `req-${Date.now()}-${++requestId}`;
 }
 
-// Return raw response data that can be passed through contextBridge
 export function ipcFetch(url: string, init?: RequestInit): Promise<IpcResponse> {
-  return new Promise((resolve, reject) => {
+  baseLogger.info('ipcFetch called {method} {url}', { method: init?.method || 'GET', url });
+  return new Promise((resolve) => {
     const id = generateRequestId();
-    console.log(`ipcFetch: ${id} ${init?.method || 'GET'} ${url}`);
+    const logger = getPreloadFetchLogger({ id });
+    logger.debug('Generated request ID {id}');
+    logger.debug('ipcFetch init {method} {url}', { method: init?.method || 'GET', url });
 
     const request: IpcRequest = {
       id,
       method: (init?.method?.toUpperCase() || 'GET') as HTTPMethod,
       url,
       headers: headersToObject(init?.headers),
-      body: init?.body
+      body: init?.body as SerializedBody | undefined
     };
 
-    let responseResolved = false;
+    const responseHandler = (_event: IpcRendererEvent, response: IpcResponseData) => {
+      if (response.id !== id) {
+        logger.warn('ID mismatch, ignoring got={got}, expected{expected}', { got: response.id, expected: id });
+        return;
+      }
 
-    const responseHandler = (_event: any, response: IpcResponseData) => {
-      if (response.id !== id) return;
-
+      logger.debug('ID matched; cleaning up and resolving');
       cleanup();
-      responseResolved = true;
 
       if (response.isStream) {
-        // For streams, just return metadata and let renderer handle ReadableStream
+        logger.debug('Resolving with STREAM response');
         resolve({
           id: response.id,
           status: response.status,
@@ -55,8 +64,9 @@ export function ipcFetch(url: string, init?: RequestInit): Promise<IpcResponse> 
           headers: response.headers,
           isStream: true
         });
+        logger.debug('STREAM response resolved');
       } else {
-        // Regular response - return body directly
+        logger.debug('Resolving with NON-STREAM response');
         resolve({
           id: response.id,
           status: response.status,
@@ -64,6 +74,7 @@ export function ipcFetch(url: string, init?: RequestInit): Promise<IpcResponse> 
           headers: response.headers,
           body: response.body
         });
+        logger.debug('NON-STREAM response resolved');
       }
     };
 
@@ -73,40 +84,28 @@ export function ipcFetch(url: string, init?: RequestInit): Promise<IpcResponse> 
 
     ipcRenderer.on(FETCH_RESPONSE_CHANNEL, responseHandler);
 
-    // Send request
     ipcRenderer.send(FETCH_REQUEST_CHANNEL, request);
-
-    // Timeout handling
-    if (init?.signal) {
-      init.signal.addEventListener('abort', () => {
-        if (!responseResolved) {
-          cleanup();
-          reject(new DOMException('Aborted', 'AbortError'));
-        }
-      });
-    }
   });
 }
 
-// Create stream controller for given stream ID
 export function createStreamController(streamId: string): StreamController {
   const listeners = {
-    data: [] as ((data: any) => void)[],
+    data: [] as ((data: string) => void)[],
     end: [] as (() => void)[],
     error: [] as ((error: { message: string; stack?: string }) => void)[]
   };
 
-  const dataHandler = (_event: any, chunk: IpcStreamChunk) => {
+  const dataHandler = (_event: IpcRendererEvent, chunk: IpcStreamChunk) => {
     if (chunk.id !== streamId) return;
     listeners.data.forEach((cb) => cb(chunk.data));
   };
 
-  const endHandler = (_event: any, end: IpcStreamEnd) => {
+  const endHandler = (_event: IpcRendererEvent, end: IpcStreamEnd) => {
     if (end.id !== streamId) return;
     listeners.end.forEach((cb) => cb());
   };
 
-  const errorHandler = (_event: any, error: IpcStreamError) => {
+  const errorHandler = (_event: IpcRendererEvent, error: IpcStreamError) => {
     if (error.id !== streamId) return;
     listeners.error.forEach((cb) => cb(error.error));
   };
@@ -150,4 +149,11 @@ function headersToObject(headers?: HeadersInit): Record<string, string> {
   }
 
   return headers as Record<string, string>;
+}
+
+export function abortIpcRequest(id: string): void {
+  const logger = getPreloadFetchLogger({ id });
+  logger.warn('Aborting request {id}', { id });
+  const request: IpcAbortRequest = { id };
+  ipcRenderer.send(FETCH_ABORT_CHANNEL, request);
 }

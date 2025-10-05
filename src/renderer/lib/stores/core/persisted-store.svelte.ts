@@ -2,6 +2,10 @@ import { isEqual } from 'es-toolkit';
 import { createSubscriber } from 'svelte/reactivity';
 import type { StorageValue } from 'electron-async-storage';
 import superjson from 'superjson';
+import { getLoggerBy } from '@/shared/logging/helpers';
+import type { Logger } from '@logtape/logtape';
+
+const logger = getLoggerBy('persisted');
 
 class ElectronStorageAdapter<T extends StorageValue> {
   private storageService = window.storageService;
@@ -95,18 +99,20 @@ export class PersistedStore<T extends StorageValue> {
   #proxies = new WeakMap();
   #isStoring = false;
   #pendingValue: T | null | undefined = undefined;
+  #logger: Logger;
 
   constructor(key: string, initialValue: T) {
     this.#current = initialValue;
     this.#key = key;
     this.#storage = new ElectronStorageAdapter<T>();
+    this.#logger = logger.getChild(key);
 
     this.#hydratePersistState(key, initialValue);
 
     this.#subscribe = createSubscriber((update) => {
       this.#update = update;
       this.#storage?.watchAsync<T>(this.#key, (event) => {
-        console.log(`Data ${event.key} persist success`);
+        this.#logger.debug('Persist success {key}', { key: event.key });
       });
       return () => {
         this.#update = undefined;
@@ -145,7 +151,7 @@ export class PersistedStore<T extends StorageValue> {
         this.#update?.();
       }
     } catch (error) {
-      console.error(`Error hydrate persisted state from Electron storage for key "${key}":`, error);
+      this.#logger.error('Hydrate error for key {key}: {error}', { key, error });
       this.#current = initialValue;
     }
   }
@@ -171,7 +177,7 @@ export class PersistedStore<T extends StorageValue> {
       })
       .catch((error) => {
         this.#isStoring = false;
-        console.error(`Error when writing value from persisted store "${this.#key}" to Electron storage`, error);
+        this.#logger.error('Persist write error for key {key}: {error}', { key: this.#key, error });
 
         if (this.#pendingValue !== undefined) {
           const pending = this.#pendingValue;

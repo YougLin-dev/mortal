@@ -5,9 +5,11 @@ import type { Tab, WindowState } from '@/shared/types/window';
 import { goto } from '@mateothegreat/svelte5-router';
 import { nanoid } from 'nanoid';
 import superjson from 'superjson';
+import { getLoggerBy } from '@/shared/logging/helpers';
+
+const logger = getLoggerBy('store', 'window');
 
 const initialWindowState = superjson.parse(superjson.stringify(window.windowState)) as WindowState;
-
 /**
  * WindowStore manages window state and tab navigation.
  *
@@ -135,7 +137,7 @@ class WindowStore {
    * Activate a tab by ID
    */
   activateTab(tabId: string): void {
-    console.log('Activating tab:', tabId);
+    logger.debug('Activating tab', { tabId });
     this.tabs = this.tabs.map((tab) => ({
       ...tab,
       isActive: tab.id === tabId
@@ -198,7 +200,7 @@ class WindowStore {
       await window.windowService.setAlwaysOnTop(newState);
       this.isAlwaysOnTop = newState;
     } catch (error) {
-      console.error('Failed to toggle always on top:', error);
+      logger.error('Failed to toggle always on top: {error}', { error });
     }
   }
 
@@ -214,11 +216,11 @@ class WindowStore {
       const currentActiveTabUrl = this.activeTab?.url || '/welcome';
 
       if (this.#previousActiveTabUrl !== currentActiveTabUrl) {
-        console.log('  ✅ URL changed, executing goto:', currentActiveTabUrl);
+        logger.debug('URL changed, executing goto', { url: currentActiveTabUrl });
         goto(currentActiveTabUrl);
         this.#previousActiveTabUrl = currentActiveTabUrl;
       } else {
-        console.log('  ❌ URL unchanged, skipping goto');
+        logger.debug('URL unchanged, skipping goto');
       }
     });
   }

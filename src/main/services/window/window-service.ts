@@ -9,6 +9,9 @@ import { WindowStateManager } from '@/main/services/window/window-state-manager'
 import { toArgument } from '@/shared/utils/preload-utils';
 import { storage } from '@/main/core/storage/config';
 import { STORAGES } from '@/shared/types/storage-key';
+import { getLoggerBy } from '@/shared/logging/helpers';
+
+const logger = getLoggerBy('service', 'window', 'lifecycle');
 
 @Service
 export class WindowService {
@@ -112,7 +115,7 @@ export class WindowService {
       if (mainWindow.isMinimized()) mainWindow.restore();
       if (!mainWindow.isVisible()) mainWindow.show();
       mainWindow.focus();
-      console.log('main window shown via', reason);
+      logger.info('main window shown via {reason}', { reason });
       if (showTimeout) {
         clearTimeout(showTimeout);
         showTimeout = null;
@@ -121,13 +124,13 @@ export class WindowService {
 
     // Timeout fallback in case events are delayed or skipped
     showTimeout = setTimeout(() => {
-      console.warn('ready-to-show timeout; forcing window.show()');
+      logger.warn('ready-to-show timeout; forcing window.show()');
       showWindowIfNeeded('timeout-4s');
     }, 4000);
 
     // Primary: ready-to-show
     mainWindow.once('ready-to-show', () => {
-      console.log('main window ready to show');
+      logger.info('main window ready to show');
       showWindowIfNeeded('ready-to-show');
     });
 
@@ -138,7 +141,11 @@ export class WindowService {
 
     // Ensure visibility even if load fails
     mainWindow.webContents.once('did-fail-load', (_ev, errorCode, errorDescription, validatedURL) => {
-      console.error('Main window failed to load:', { errorCode, errorDescription, validatedURL });
+      logger.error('Main window failed to load: {errorCode} {errorDescription} {url}', {
+        errorCode,
+        errorDescription,
+        url: validatedURL
+      });
       showWindowIfNeeded('did-fail-load');
     });
   }

@@ -8,6 +8,9 @@ import type { CollectedMetadata } from '@/vite-plugins/metadata';
 import { GLOBAL_EVENTS } from '@/shared/types/event';
 import { camelCase } from 'es-toolkit';
 import { ipcEventRouter } from '@/preload/ipc/router';
+import { getLoggerBy } from '@/shared/logging/helpers';
+
+const logger = getLoggerBy('preload', 'bridge');
 
 export const globalEmitter: Emitter<any> = mitt();
 export function setupEventForwarding() {
@@ -25,7 +28,7 @@ export function initPreloadBridge(): Record<string, any> {
     const serviceMetadata = metadata as CollectedMetadata;
 
     if (!serviceMetadata?.services) {
-      console.error('Invalid service metadata format');
+      logger.error('Invalid service metadata format');
       return bridge;
     }
 
@@ -47,7 +50,7 @@ export function initPreloadBridge(): Record<string, any> {
       bridge[serviceName] = serviceObj;
     }
   } catch (error) {
-    console.error('Failed to load service metadata:', error);
+    logger.error('Failed to load service metadata: {error}', { error });
   }
 
   return bridge;

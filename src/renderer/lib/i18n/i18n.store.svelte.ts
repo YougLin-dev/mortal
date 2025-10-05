@@ -6,6 +6,9 @@ import type { TranslateFn, Path, Widen } from './types';
 import enMessages from './locales/en';
 import { isDev } from '$lib/utils';
 import { SUPPORTED_LOCALES } from '.';
+import { getLoggerBy } from '@/shared/logging/helpers';
+
+const logger = getLoggerBy('i18n');
 
 // Infer the Messages type from the default locale
 export type Messages = Widen<typeof enMessages>;
@@ -74,7 +77,7 @@ class I18nStore {
     if (this.#localeMap.has(code)) {
       this.#persisted.current = code;
     } else {
-      console.warn(`[i18n] Locale "${code}" not registered`);
+      logger.warn('Locale not registered', { code });
     }
   }
 
@@ -112,7 +115,7 @@ class I18nStore {
 
     if (typeof value !== 'string') {
       if (isDev) {
-        console.warn(`[i18n] Translation key "${key}" not found or not a string`);
+        logger.warn('Translation key not found', { key });
       }
       return key;
     }
@@ -199,7 +202,7 @@ class I18nStore {
       const entry = this.#localeMap.get(code);
 
       if (!entry) {
-        console.warn(`[i18n] Locale "${code}" not found, using fallback`);
+        logger.warn('Locale not found, using fallback', { code });
         this.#currentDict = this.#fallbackDict;
         this.#merge();
         return;
@@ -217,7 +220,7 @@ class I18nStore {
 
       this.#merge();
     } catch (error) {
-      console.error(`[i18n] Failed to load locale "${code}":`, error);
+      logger.error('Failed to load locale {code}: {error}', { code, error });
       this.#currentDict = this.#fallbackDict;
       this.#merge();
     } finally {

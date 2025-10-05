@@ -5,15 +5,18 @@ import { TITLE_BAR_OVERLAY } from '@/shared/consts/ui';
 import type { ThemeType } from '@/shared/types/theme';
 import { STORAGES } from '@/shared/types/storage-key';
 import { storage } from '@/main/core/storage/config';
+import { getLoggerBy } from '@/shared/logging/helpers';
+
+const logger = getLoggerBy('service', 'theme');
 
 @Service
 export class ThemeService {
   constructor() {
     const state = storage.getItemSync(STORAGES.APP_THEME_STATE);
-    console.log(`state = ${JSON.stringify(state)}, ${typeof state}`);
+    logger.debug('Loaded theme state {stateType}', { stateType: typeof state });
 
     if (state == null) {
-      console.warn('Unable to laod themeState from storage');
+      logger.warn('Unable to load themeState from storage');
       return;
     }
 
