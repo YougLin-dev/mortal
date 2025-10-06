@@ -25,4 +25,5 @@ export interface Tab {
 
 export interface InternalWindowState extends WindowState {
   displayBounds?: Electron.Rectangle;
+  displayId?: number;
 }

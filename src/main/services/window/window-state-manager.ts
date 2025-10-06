@@ -74,15 +74,16 @@ export class WindowStateManager {
   }
 
   private resetToDefault(): void {
-    const displayBounds = screen.getPrimaryDisplay().bounds;
+    const primary = screen.getPrimaryDisplay();
+    const work = primary.workArea;
     const defaults = this.options.defaultState || {};
     this.state = {
       ...this.state,
       width: defaults.width || 800,
       height: defaults.height || 600,
-      x: 0,
-      y: 0,
-      displayBounds
+      x: work.x,
+      y: work.y,
+      displayBounds: primary.bounds
     };
   }
 
@@ -95,13 +96,31 @@ export class WindowStateManager {
     );
   }
 
+  private getTargetDisplay(): Electron.Display {
+    const displays = screen.getAllDisplays();
+
+    if (this.state.displayId != null) {
+      const byId = displays.find((d) => d.id === this.state.displayId);
+      if (byId) return byId;
+    }
+
+    if (Number.isInteger(this.state.x) && Number.isInteger(this.state.y)) {
+      return screen.getDisplayNearestPoint({ x: this.state.x!, y: this.state.y! });
+    }
+
+    return screen.getPrimaryDisplay();
+  }
+
   private ensureWindowVisibleOnSomeDisplay(): void {
     const visible = screen.getAllDisplays().some((display) => {
-      return this.windowWithinBounds(display.bounds);
+      return this.windowWithinBounds(display.workArea);
     });
 
     if (!visible) {
-      this.resetToDefault();
+      const target = this.getTargetDisplay();
+      const work = target.workArea;
+      this.state.x = Math.max(work.x, Math.floor(work.x + (work.width - this.state.width) / 2));
+      this.state.y = Math.max(work.y, Math.floor(work.y + (work.height - this.state.height) / 2));
     }
   }
 
@@ -132,7 +151,10 @@ export class WindowStateManager {
       this.state.isAlwaysOnTop = window.isAlwaysOnTop();
       this.state.isMaximized = window.isMaximized();
       this.state.isFullScreen = window.isFullScreen();
-      this.state.displayBounds = screen.getDisplayMatching(winBounds).bounds;
+
+      const display = screen.getDisplayMatching(winBounds);
+      this.state.displayBounds = display.bounds;
+      this.state.displayId = display.id;
     } catch (error) {
       logger.warn('Failed to update window state: {error}', { error });
     }
@@ -177,6 +199,15 @@ export class WindowStateManager {
   };
 
   manage(win: BrowserWindow): void {
+    const initialBounds = {
+      x: this.state.x!,
+      y: this.state.y!,
+      width: this.state.width,
+      height: this.state.height
+    };
+
+    win.setBounds(initialBounds, false);
+
     if (this.options.restoreMaximized !== false && this.state.isMaximized) {
       win.maximize();
     }
@@ -194,6 +225,7 @@ export class WindowStateManager {
 
   unmanage(): void {
     if (this.winRef) {
+      this.winRef.removeListener('always-on-top-changed', this.stateChangeHandler);
       this.winRef.removeListener('resize', this.stateChangeHandler);
       this.winRef.removeListener('move', this.stateChangeHandler);
       if (this.stateChangeTimer) {
