@@ -137,6 +137,12 @@ class WindowStore {
    * Activate a tab by ID
    */
   activateTab(tabId: string): void {
+    // Skip if tab is already active
+    if (this.activeTabId === tabId) {
+      logger.debug('Tab already active, skipping', { tabId });
+      return;
+    }
+
     logger.debug('Activating tab', { tabId });
     this.tabs = this.tabs.map((tab) => ({
       ...tab,
