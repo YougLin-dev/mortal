@@ -358,3 +358,7 @@ When adding IPC handlers:
 - **ASAR integrity**: Validates app bundle integrity
 - **Disabled features**: Node integration, experimental features disabled in renderer
 - **Single instance**: Application enforces single-instance lock
+
+## Other
+
+See @.claude/\*.md

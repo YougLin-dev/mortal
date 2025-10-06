@@ -137,27 +137,50 @@ function processResponse(rawResponse: IpcResponse, abortSignal?: AbortSignal): R
       };
     }
 
+    let isClosed = false;
+
     const stream = new ReadableStream({
       start(streamController) {
         logger.debug('ReadableStream.start called');
         const encoder = new TextEncoder();
 
         controller.onData((data) => {
+          if (isClosed) {
+            logger.debug('Ignoring data - stream was closed/cancelled by consumer');
+            return;
+          }
           logger.debug('Stream data chunk received {data}', { data });
           streamController.enqueue(encoder.encode(data));
         });
 
         controller.onEnd(() => {
+          if (isClosed) {
+            logger.debug('Ignoring end - stream already closed');
+            return;
+          }
           logger.info('Stream ended');
+          isClosed = true;
           controller.cleanup();
           streamController.close();
         });
 
         controller.onError((error) => {
+          if (isClosed) {
+            logger.debug('Ignoring error - stream already closed');
+            return;
+          }
           logger.error('Stream error: {error}', { error });
+          isClosed = true;
           controller.cleanup();
           streamController.error(new Error(error.message));
         });
+      },
+      cancel(reason) {
+        // Called when stream is closed/cancelled by downstream consumer (e.g., AI SDK on error)
+        // This prevents further enqueue attempts after the stream enters errored state
+        logger.debug('Stream cancelled by consumer: {reason}', { reason });
+        isClosed = true;
+        controller.cleanup();
       }
     });
 

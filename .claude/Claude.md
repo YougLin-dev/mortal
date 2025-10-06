@@ -1,3 +1,12 @@
+---
+globs:
+  - '**/*.svelte.ts'
+  - '**/*.svelte'
+  - '**/src/renderer/**/*.ts
+---
+
+Follow these Svelte 5 conventions:
+
 ## Svelte
 
 You **MUST** use the Svelte 5 API unless explicitly tasked to write Svelte 4 syntax. If you don't know about the API yet, below is the most important information about it. Other syntax not explicitly listed like `{#if ...}` blocks stay the same, so you can reuse your Svelte 4 knowledge for these.
