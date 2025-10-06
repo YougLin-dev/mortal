@@ -107,13 +107,12 @@ export class PersistedStore<T extends StorageValue> {
     this.#storage = new ElectronStorageAdapter<T>();
     this.#logger = logger.getChild(key);
 
-    this.#hydratePersistState(key, initialValue);
+    this.#hydratePersistState(key, initialValue).then(() => {
+      this.#setupWatch();
+    });
 
     this.#subscribe = createSubscriber((update) => {
       this.#update = update;
-      this.#storage?.watchAsync<T>(this.#key, (event) => {
-        this.#logger.debug('Persist success {key}', { key: event.key });
-      });
       return () => {
         this.#update = undefined;
         this.#storage?.unwatchAsync(this.#key);
@@ -156,11 +155,38 @@ export class PersistedStore<T extends StorageValue> {
     }
   }
 
+  #setupWatch(): void {
+    this.#storage?.watchAsync<T>(this.#key, (event) => {
+      const remoteValue = event.value;
+
+      if (!isEqual(remoteValue, this.#current)) {
+        this.#logger.info('Syncing remote update for {key}', {
+          key: event.key,
+          oldValue: this.#current,
+          newValue: remoteValue
+        });
+
+        this.#current = remoteValue;
+
+        this.#update?.();
+
+        // IMPORTANT: Do NOT call #store() here to avoid circular updates
+        // The remote update already persisted to storage by another renderer
+      } else {
+        this.#logger.debug('Ignoring identical remote update for {key}', {
+          key: event.key
+        });
+      }
+    });
+  }
+
   #store(value: T | undefined | null): void {
     if (this.#isStoring) {
       this.#pendingValue = value ?? null;
       return;
     }
+
+    this.#logger.debug('Calling #store for key {key}', { key: this.#key });
 
     this.#isStoring = true;
     this.#storage
