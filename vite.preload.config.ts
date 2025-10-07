@@ -18,5 +18,21 @@ export default defineConfig({
       '@/shared': resolve(__dirname, 'src/shared/'),
       '@/preload': resolve(__dirname, 'src/preload/')
     }
+  },
+  build: {
+    sourcemap: false,
+    minify: 'terser',
+    terserOptions: {
+      compress: {
+        drop_console: true,
+        drop_debugger: true
+      },
+      mangle: {
+        toplevel: true
+      },
+      format: {
+        comments: false
+      }
+    }
   }
 });

@@ -2,9 +2,10 @@ import { defineConfig } from 'eslint/config';
 import tseslint from '@electron-toolkit/eslint-config-ts';
 import eslintConfigPrettier from '@electron-toolkit/eslint-config-prettier';
 import eslintPluginSvelte from 'eslint-plugin-svelte';
+import gitignore from 'eslint-config-flat-gitignore';
 
 export default defineConfig(
-  { ignores: ['**/node_modules', '**/dist', '**/out', '**/.vite'] },
+  gitignore(),
 
   tseslint.configs.recommended,
   {

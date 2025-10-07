@@ -14,6 +14,21 @@ export default defineConfig({
     }
   },
   build: {
-    outDir: resolve(__dirname, '.vite/build/renderer/main_window')
+    outDir: resolve(__dirname, '.vite/build/renderer/main_window'),
+    sourcemap: false,
+    minify: 'terser',
+    terserOptions: {
+      compress: {
+        drop_console: true,
+        drop_debugger: true,
+        pure_funcs: ['console.log', 'console.debug']
+      },
+      mangle: {
+        toplevel: true
+      },
+      format: {
+        comments: false
+      }
+    }
   }
 });

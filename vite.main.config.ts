@@ -21,6 +21,21 @@ export default defineConfig({
     }
   },
   build: {
+    sourcemap: false,
+    minify: 'terser',
+    terserOptions: {
+      compress: {
+        drop_console: true,
+        drop_debugger: true,
+        pure_funcs: ['console.log', 'console.debug', 'console.trace']
+      },
+      mangle: {
+        toplevel: true
+      },
+      format: {
+        comments: false
+      }
+    },
     lib: {
       entry: 'src/main/main.ts',
       formats: ['es'],

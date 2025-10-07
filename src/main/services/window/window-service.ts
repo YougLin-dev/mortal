@@ -4,7 +4,7 @@ import path from 'node:path';
 import { Handler, Service } from '@/shared/decorators';
 import { AppProtocol } from '@/main/core/protocols/app-protocol';
 import { TITLE_BAR_OVERLAY, WIN } from '@/shared/consts/ui';
-import { platform } from '@electron-toolkit/utils';
+import { is, platform } from '@electron-toolkit/utils';
 import { WindowStateManager } from '@/main/services/window/window-state-manager';
 import { toArgument } from '@/shared/utils/preload-utils';
 import { storage } from '@/main/core/storage/config';
@@ -94,6 +94,7 @@ export class WindowService {
         contextIsolation: true,
         allowRunningInsecureContent: false,
         experimentalFeatures: false,
+        devTools: is.dev,
         additionalArguments: [
           toArgument('windowState', mainWindowState.windowState),
           toArgument('isMac', platform.isMacOS),
