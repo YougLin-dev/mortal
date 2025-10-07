@@ -77,12 +77,14 @@ export class WindowStateManager {
     const primary = screen.getPrimaryDisplay();
     const work = primary.workArea;
     const defaults = this.options.defaultState || {};
+    const width = defaults.width || 800;
+    const height = defaults.height || 600;
     this.state = {
       ...this.state,
-      width: defaults.width || 800,
-      height: defaults.height || 600,
-      x: work.x,
-      y: work.y,
+      width,
+      height,
+      x: Math.floor(work.x + (work.width - width) / 2),
+      y: Math.floor(work.y + (work.height - height) / 2),
       displayBounds: primary.bounds
     };
   }
@@ -199,6 +201,8 @@ export class WindowStateManager {
   };
 
   manage(win: BrowserWindow): void {
+    this.validateState();
+
     const initialBounds = {
       x: this.state.x!,
       y: this.state.y!,
