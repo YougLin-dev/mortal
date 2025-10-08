@@ -13,8 +13,14 @@ declare global {
       setTheme: (theme: ThemeType) => Promise<void>;
     };
 
-    windowService: {
+    shellWindowService: {
       setAlwaysOnTop: (alwaysOnTop: boolean) => Promise<void>;
+      showTabContextMenu: (params: { tabId: string; template: { action: string; label: string }[] }) => Promise<void>;
+    };
+
+    tabService: {
+      switchTab: (tabId: string, tabUrl: string) => Promise<void>;
+      closeTab: (tabId: string) => Promise<void>;
     };
 
     storageService: {

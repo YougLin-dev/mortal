@@ -5,63 +5,63 @@
     closable: boolean;
     onTabClick: (tab: Tab) => void;
     onTabClose: (tab: Tab) => void;
-    onTabCloseAll: () => void;
     class?: string;
   }
 </script>
 
 <script lang="ts">
-  import { TooltipButton } from '$lib/components/ui/tooltip-button';
-  import * as ContextMenu from '$lib/components/ui/context-menu/index.js';
+  import { t } from '$lib/i18n';
+
   import { cn } from '$lib/utils';
   import type { Tab } from '@/shared/types/window';
-  import { CircleX, X } from '@lucide/svelte';
+  import { X } from '@lucide/svelte';
 
-  const { tab, stretch = false, closable, onTabClick, onTabClose, onTabCloseAll, class: className }: Props = $props();
+  const { tab, stretch = false, closable, onTabClick, onTabClose, class: className }: Props = $props();
+
+  async function handleContextMenu(e: MouseEvent) {
+    e.preventDefault();
+
+    if (!closable) return;
+
+    await window.shellWindowService.showTabContextMenu({
+      tabId: tab.id,
+      template: [
+        { action: 'close', label: t('tabbar.close') },
+        { action: 'close-all', label: t('tabbar.close_all') }
+      ]
+    });
+  }
 </script>
 
-<ContextMenu.Root>
-  <ContextMenu.Trigger
-    class={cn(
-      'relative flex h-8 cursor-pointer items-center justify-center overflow-hidden rounded-lg px-2 text-sm',
-      stretch ? 'w-auto min-w-4' : 'w-32',
-      tab.isActive
-        ? 'bg-tabbar-active text-tabbar-active-foreground'
-        : 'transition-colors hover:bg-tabbar-accent  hover:text-tabbar-accent-foreground',
-      className
-    )}
-    style="app-region: no-drag;"
-    onclick={() => onTabClick(tab)}
-    role="button"
-    tabindex={0}
-  >
-    <div class="contents">
-      <span class="max-w-48 min-w-0 flex-1 truncate select-none">{tab.name}</span>
-      {#if closable}
-        <TooltipButton
-          tooltip="关闭标签页"
-          side="bottom"
-          variant="ghost"
-          size="icon"
-          class={cn('h-auto w-auto shrink-0 rounded-full bg-transparent p-1 transition-colors')}
-          onclick={(e) => {
-            e.stopPropagation();
-            onTabClose(tab);
-          }}
-        >
-          <X class="size-3" />
-        </TooltipButton>
-      {/if}
-    </div>
-  </ContextMenu.Trigger>
-  <ContextMenu.Content class="w-48">
-    <ContextMenu.Item onclick={() => onTabClose(tab)} disabled={!closable}>
-      <X class="mr-2 h-4 w-4" />
-      关闭
-    </ContextMenu.Item>
-    <ContextMenu.Item onclick={() => onTabCloseAll()} disabled={!closable}>
-      <CircleX class="mr-2 h-4 w-4" />
-      关闭全部
-    </ContextMenu.Item>
-  </ContextMenu.Content>
-</ContextMenu.Root>
+<div
+  role="button"
+  tabindex={0}
+  class={cn(
+    'relative flex h-8 cursor-pointer items-center justify-center overflow-hidden rounded-lg px-2 text-sm ',
+    stretch ? 'w-auto min-w-4' : 'w-32',
+    tab.isActive ? 'bg-tabbar-active text-tabbar-active-foreground' : 'transition-colors hover:bg-tabbar-accent  hover:text-tabbar-accent-foreground',
+    className
+  )}
+  style="app-region: no-drag;"
+  onclick={() => onTabClick(tab)}
+  onkeydown={(e) => e.key === 'Enter' && onTabClick(tab)}
+  oncontextmenu={handleContextMenu}
+>
+  <div class="contents">
+    <span class="max-w-48 min-w-0 flex-1 truncate select-none" title={tab.name}>{tab.name}</span>
+    {#if closable}
+      <button
+        title="关闭标签页"
+        class={cn(
+          'h-auto w-auto shrink-0 rounded-full bg-transparent p-1 transition-colors hover:bg-accent hover:text-accent-foreground dark:hover:bg-accent/50'
+        )}
+        onclick={(e) => {
+          e.stopPropagation();
+          onTabClose(tab);
+        }}
+      >
+        <X class="size-3" />
+      </button>
+    {/if}
+  </div>
+</div>

@@ -2,8 +2,16 @@ import { platform } from '@electron-toolkit/utils';
 
 export const WIN = {
   MIN_WIDTH: 800,
-  MIN_HEIGHT: 600
-};
+  MIN_HEIGHT: 600,
+  BACKGROUND_CORLOR: {
+    DARK: '#1f2020',
+    LIGHT: '#f4f3f2'
+  },
+  CONTENTVIEW_BACKGROUND_COLOR: {
+    DARK: '#2a2a2a',
+    LIGHT: '#e8e8e8'
+  }
+} as const;
 
 export const TITLE_BAR_OVERLAY = {
   DARK: {

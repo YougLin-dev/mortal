@@ -1,18 +1,25 @@
 import './services';
 
-import { app, BrowserWindow } from 'electron';
+import { app, BaseWindow } from 'electron';
 import started from 'electron-squirrel-startup';
 import { setupIPC } from './core/ipc/setup';
 import { setupRouter } from './core/router/setup';
 import { storage } from './core/storage/config';
 import { WindowStateManager } from './services/window/window-state-manager';
-import { windowService } from './services/window/window-service';
 import { platform } from '@electron-toolkit/utils';
 import { initLogging } from '@/shared/logging/config';
 import { getLoggerBy } from '@/shared/logging/helpers';
+import { setupProtocolHandlers, shellWindowService } from './services/window/shell-window-service';
 
 initLogging('main');
 const logger = getLoggerBy('app', 'lifecycle');
+
+function resotreWindows() {
+  storage.getKeysSync('app:windows').forEach((key) => {
+    const windowState = storage.getItemSync(key as 'app:windows:');
+    if (windowState) shellWindowService.createWindow(windowState);
+  });
+}
 
 // Handle Squirrel events on Windows (installer/uninstaller) and quit early
 if (started) {
@@ -28,14 +35,14 @@ if (!gotTheLock) {
 } else {
   // Focus existing window when a second instance is launched
   app.on('second-instance', async () => {
-    const all = BrowserWindow.getAllWindows();
+    const all = BaseWindow.getAllWindows();
     if (all.length > 0) {
-      const mainWindow = all[0];
-      if (mainWindow.isMinimized()) mainWindow.restore();
-      if (!mainWindow.isVisible()) mainWindow.show();
-      mainWindow.focus();
+      const window = all[0];
+      if (window.isMinimized()) window.restore();
+      if (!window.isVisible()) window.show();
+      window.focus();
     } else if (app.isReady()) {
-      await windowService.createMainWindow();
+      resotreWindows();
     }
   });
 
@@ -44,10 +51,9 @@ if (!gotTheLock) {
 
     setupIPC();
     setupRouter();
+    setupProtocolHandlers();
 
-    windowService.setupProtocolHandler();
-
-    await windowService.createMainWindow();
+    resotreWindows();
   });
 
   app.on('window-all-closed', async () => {
@@ -62,8 +68,8 @@ if (!gotTheLock) {
   });
 
   app.on('activate', async () => {
-    if (BrowserWindow.getAllWindows().length === 0) {
-      await windowService.createMainWindow();
+    if (BaseWindow.getAllWindows().length === 0) {
+      resotreWindows();
     }
   });
 }

@@ -6,7 +6,8 @@ export const UNIFIED_EVENT_CHANNEL = 'unified-channel';
 export const GLOBAL_EVENTS = {
   THEME_CHANGED: 'theme-changed',
   THEME_ERROR: 'theme-error',
-  STORAGE_PREFIX: 'storage:*'
+  STORAGE_PREFIX: 'storage:*',
+  TAB_CONTEXT_MENU_ACTION: 'tab-context-menu-action'
 } as const;
 
 export interface GlobalEventDataMap {
@@ -16,6 +17,9 @@ export interface GlobalEventDataMap {
 
   // storage
   [key: `storage:${string}`]: { key: string; value: StorageValue };
+
+  // tab context menu
+  [GLOBAL_EVENTS.TAB_CONTEXT_MENU_ACTION]: { action: string; tabId?: string };
 
   [key: string]: unknown;
   [key: symbol]: unknown;

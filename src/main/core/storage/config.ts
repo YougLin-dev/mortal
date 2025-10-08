@@ -74,3 +74,10 @@ export const storage = createStorage<APPStorage>({
     }
   }
 });
+
+storage.mount(
+  'app:theme',
+  fsDriver({
+    base: storagePath
+  })
+);

@@ -1,5 +1,5 @@
 import type { InternalWindowState, WindowState } from '@/shared/types/window';
-import type { BrowserWindow } from 'electron';
+import type { BaseWindow } from 'electron';
 import { screen } from 'electron';
 import { storage } from '@/main/core/storage/config';
 import { STORAGES } from '@/shared/types/storage-key';
@@ -18,7 +18,7 @@ export class WindowStateManager {
   private static instances = new Set<WindowStateManager>();
 
   private state: InternalWindowState;
-  private winRef: BrowserWindow | null = null;
+  private winRef: BaseWindow | null = null;
   private stateChangeTimer: NodeJS.Timeout | null = null;
   private readonly eventHandlingDelay = 100;
   private readonly storageKey: `app:windows:${string}`;
@@ -57,7 +57,7 @@ export class WindowStateManager {
     }
   }
 
-  private isNormal(win: BrowserWindow): boolean {
+  private isNormal(win: BaseWindow): boolean {
     return !win.isMaximized() && !win.isMinimized() && !win.isFullScreen();
   }
 
@@ -138,7 +138,7 @@ export class WindowStateManager {
     }
   }
 
-  private updateState(win?: BrowserWindow): void {
+  private updateState(win?: BaseWindow): void {
     const window = win || this.winRef;
     if (!window) return;
 
@@ -162,7 +162,7 @@ export class WindowStateManager {
     }
   }
 
-  private saveState(win?: BrowserWindow): void {
+  private saveState(win?: BaseWindow): void {
     if (win) {
       this.updateState(win);
     }
@@ -200,7 +200,7 @@ export class WindowStateManager {
     WindowStateManager.instances.delete(this);
   };
 
-  manage(win: BrowserWindow): void {
+  manage(win: BaseWindow): void {
     this.validateState();
 
     const initialBounds = {

@@ -4,7 +4,7 @@
 </script>
 
 <header class="fixed top-titlebar-area-y right-0 left-titlebar-area-x z-50 flex h-titlebar-h w-titlebar-w items-center" style="app-region: drag;">
-  <TabBar class="w-[calc(var(--spacing-titlebar-w)-82px)]" />
+  <TabBar class="w-[calc(100%-82px)]" />
   <PinSwitch class="mr-2" style="app-region: no-drag;" />
   <ThemeSwitch class="mr-auto" style="app-region: no-drag;" />
 </header>

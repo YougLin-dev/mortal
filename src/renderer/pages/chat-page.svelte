@@ -16,7 +16,7 @@
   }
 </script>
 
-<main class="flex h-full flex-col bg-background">
+<main class="flex h-full flex-col">
   <!-- Messages Container -->
   <div class="flex-1 overflow-y-auto px-4 py-6">
     <div class="mx-auto max-w-3xl space-y-4">
@@ -49,14 +49,14 @@
   </div>
 
   <!-- Input Container -->
-  <div class="border-t bg-background px-4 py-4">
+  <div class="border-t px-4 py-4">
     <div class="mx-auto max-w-3xl">
       <form onsubmit={handleSubmit} class="flex gap-2">
         <input
           bind:value={input}
           type="text"
           placeholder="输入消息..."
-          class="flex-1 rounded-lg border bg-background px-4 py-2.5 text-sm transition-colors outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
+          class="flex-1 rounded-lg border px-4 py-2.5 text-sm transition-colors outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
         />
         <button
           type="submit"

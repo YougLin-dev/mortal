@@ -88,5 +88,9 @@ export default {
       systemInfoError: 'システム情報エラー：{error}',
       fetchUserError: 'ユーザー取得エラー：{error}'
     }
+  },
+  tabbar: {
+    close: 'Close',
+    close_all: 'Close All'
   }
 } as const satisfies Messages;

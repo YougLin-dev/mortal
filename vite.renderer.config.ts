@@ -14,6 +14,13 @@ export default defineConfig({
     }
   },
   build: {
+    rollupOptions: {
+      input: {
+        content: resolve(__dirname, 'src/renderer/content.html'),
+        titlebar: resolve(__dirname, 'src/renderer/titlebar.html'),
+        loading: resolve(__dirname, 'src/renderer/loading.html')
+      }
+    },
     outDir: resolve(__dirname, '.vite/build/renderer/main_window'),
     sourcemap: false,
     minify: 'terser',

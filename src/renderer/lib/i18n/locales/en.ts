@@ -86,5 +86,9 @@ export default {
       systemInfoError: 'System info error: {error}',
       fetchUserError: 'Fetch user error: {error}'
     }
+  },
+  tabbar: {
+    close: 'Close',
+    close_all: 'Close All'
   }
 } as const;

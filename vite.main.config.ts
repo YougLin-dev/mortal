@@ -2,6 +2,8 @@ import { defineConfig, normalizePath } from 'vite';
 import { viteStaticCopy } from 'vite-plugin-static-copy';
 import { resolve } from 'path';
 
+const isDev = process.env.NODE_ENV !== 'production';
+
 // https://vitejs.dev/config
 export default defineConfig({
   plugins: [
@@ -21,7 +23,7 @@ export default defineConfig({
     }
   },
   build: {
-    sourcemap: false,
+    sourcemap: isDev,
     minify: 'terser',
     terserOptions: {
       compress: {

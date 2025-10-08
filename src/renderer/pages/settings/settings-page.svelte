@@ -10,22 +10,22 @@
     {
       hooks: {
         pre: async (route: RouteResult) => {
-          if (route.result.path.original === '/settings') {
-            goto('/settings/general');
+          if (route.result.path.original === 'settings') {
+            goto('settings/general');
           }
         }
       }
     },
     {
-      path: '/general',
+      path: 'general',
       component: GeneralSettings
     },
     {
-      path: '/providers',
+      path: 'providers',
       component: ProviderSettings
     },
     {
-      path: '/about',
+      path: 'about',
       component: AboutSettings
     }
   ];
@@ -57,7 +57,7 @@
         </nav>
       </aside>
       <div class="flex-1 overflow-y-auto p-8">
-        <Router routes={settingsRoutes} basePath="/settings" />
+        <Router routes={settingsRoutes} basePath="settings" />
       </div>
     </div>
   </main>

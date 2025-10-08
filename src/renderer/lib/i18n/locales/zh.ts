@@ -88,5 +88,9 @@ export default {
       systemInfoError: '系统信息错误：{error}',
       fetchUserError: '获取用户错误：{error}'
     }
+  },
+  tabbar: {
+    close: '关闭',
+    close_all: '关闭全部'
   }
 } as const satisfies Messages;

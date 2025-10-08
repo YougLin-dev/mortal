@@ -1,11 +1,10 @@
 import { PersistedStore } from '$lib/stores/core/persisted-store.svelte';
-import { createRootEffect } from '$lib/stores/core/create-root-effect.svelte';
 import { STORAGES } from '@/shared/types/storage-key';
 import type { Tab, WindowState } from '@/shared/types/window';
-import { goto } from '@mateothegreat/svelte5-router';
 import { nanoid } from 'nanoid';
 import superjson from 'superjson';
 import { getLoggerBy } from '@/shared/logging/helpers';
+import { GLOBAL_EVENTS } from '@/shared/types/event';
 
 const logger = getLoggerBy('store', 'window');
 
@@ -33,13 +32,9 @@ const initialWindowState = superjson.parse(superjson.stringify(window.windowStat
  */
 class WindowStore {
   #persisted: PersistedStore<WindowState>;
-  #previousActiveTabUrl: string | undefined;
 
   constructor() {
     this.#persisted = new PersistedStore<WindowState>(STORAGES.APP_WINDOWS(initialWindowState.windowId), initialWindowState);
-
-    // Setup URL synchronization
-    this.#setupUrlSync();
   }
 
   // ============================================================================
@@ -119,6 +114,8 @@ class WindowStore {
    */
   addTab(): void {
     const newTabId = nanoid(6);
+    const newTabUrl = '/chat/' + newTabId;
+
     this.tabs = this.tabs
       .map((tab) => ({
         ...tab,
@@ -129,8 +126,13 @@ class WindowStore {
         name: 'New Tab' + newTabId,
         isActive: true,
         pinned: false,
-        url: '/chat/' + newTabId
+        url: newTabUrl
       });
+
+    // Create and display the contentView for the new tab
+    window.tabService.switchTab(newTabId, newTabUrl).catch((error) => {
+      logger.error('Failed to create tab view', { error, tabId: newTabId });
+    });
   }
 
   /**
@@ -144,10 +146,21 @@ class WindowStore {
     }
 
     logger.debug('Activating tab', { tabId });
+
+    const tab = this.tabs.find((t) => t.id === tabId);
+    if (!tab) {
+      logger.error('Tab not found', { tabId });
+      return;
+    }
+
     this.tabs = this.tabs.map((tab) => ({
       ...tab,
       isActive: tab.id === tabId
     }));
+
+    window.tabService.switchTab(tabId, tab.url).catch((error) => {
+      logger.error('Failed to switch tab view', { error, tabId });
+    });
   }
 
   /**
@@ -160,14 +173,25 @@ class WindowStore {
     // Remove the tab
     this.tabs = this.tabs.filter((tab) => tab.id !== tabId);
 
+    // Destroy the corresponding WebContentsView
+    window.tabService.closeTab(tabId).catch((error) => {
+      logger.error('Failed to close tab view', { error, tabId });
+    });
+
     // If the removed tab was active and there are still tabs left, activate another one
     if (wasActive && this.tabs.length > 0) {
       // Activate the tab at the same index, or the previous one if we're at the end
       const newActiveIndex = Math.min(removedTabIndex, this.tabs.length - 1);
+      const newActiveTab = this.tabs[newActiveIndex];
       this.tabs = this.tabs.map((tab, index) => ({
         ...tab,
         isActive: index === newActiveIndex
       }));
+
+      // Switch to the newly activated tab
+      window.tabService.switchTab(newActiveTab.id, newActiveTab.url).catch((error) => {
+        logger.error('Failed to switch tab after removal', { error, tabId: newActiveTab.id });
+      });
     }
   }
 
@@ -203,32 +227,11 @@ class WindowStore {
   async toggleAlwaysOnTop(): Promise<void> {
     try {
       const newState = !this.isAlwaysOnTop;
-      await window.windowService.setAlwaysOnTop(newState);
+      await window.shellWindowService.setAlwaysOnTop(newState);
       this.isAlwaysOnTop = newState;
     } catch (error) {
       logger.error('Failed to toggle always on top: {error}', { error });
     }
-  }
-
-  // ============================================================================
-  // Private Methods
-  // ============================================================================
-
-  /**
-   * Setup URL synchronization with active tab
-   */
-  #setupUrlSync(): void {
-    createRootEffect(() => {
-      const currentActiveTabUrl = this.activeTab?.url || '/welcome';
-
-      if (this.#previousActiveTabUrl !== currentActiveTabUrl) {
-        logger.debug('URL changed, executing goto', { url: currentActiveTabUrl });
-        goto(currentActiveTabUrl);
-        this.#previousActiveTabUrl = currentActiveTabUrl;
-      } else {
-        logger.debug('URL unchanged, skipping goto');
-      }
-    });
   }
 }
 
@@ -240,3 +243,13 @@ class WindowStore {
  * Global window store instance
  */
 export const windowStore = new WindowStore();
+
+window.events.on(GLOBAL_EVENTS.TAB_CONTEXT_MENU_ACTION, ({ action, tabId }) => {
+  if (action === 'close' && tabId) {
+    const tab = windowStore.tabs.find((t) => t.id === tabId);
+    if (tab) windowStore.removeTab(tab.id);
+  } else if (action === 'close-all') {
+    const allTabs = [...windowStore.tabs];
+    allTabs.forEach((tab) => windowStore.removeTab(tab.id));
+  }
+});

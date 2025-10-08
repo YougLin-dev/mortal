@@ -1,11 +1,12 @@
 import type { IpcMainInvokeEvent } from 'electron';
-import { nativeTheme, BrowserWindow } from 'electron';
+import { nativeTheme, BaseWindow } from 'electron';
 import { Handler, Service } from '@/shared/decorators';
-import { TITLE_BAR_OVERLAY } from '@/shared/consts/ui';
+import { TITLE_BAR_OVERLAY, WIN } from '@/shared/consts/ui';
 import type { ThemeType } from '@/shared/types/theme';
 import { STORAGES } from '@/shared/types/storage-key';
 import { storage } from '@/main/core/storage/config';
 import { getLoggerBy } from '@/shared/logging/helpers';
+import { getContentViews, getTitlebarView } from '@/shared/types/view';
 
 const logger = getLoggerBy('service', 'theme');
 
@@ -26,10 +27,24 @@ export class ThemeService {
   @Handler
   setTheme(_event: IpcMainInvokeEvent, theme: ThemeType): void {
     nativeTheme.themeSource = theme;
-    const allWindows = BrowserWindow.getAllWindows();
+    const allWindows = BaseWindow.getAllWindows();
+    const topViewbackgroundColor = nativeTheme.shouldUseDarkColors ? WIN.BACKGROUND_CORLOR.DARK : WIN.BACKGROUND_CORLOR.LIGHT;
+    const bottomBackgroundColor = topViewbackgroundColor;
+
     allWindows.forEach((window) => {
-      window.setBackgroundColor(nativeTheme.shouldUseDarkColors ? '#1f2020' : '#f4f3f2');
+      window.setBackgroundColor(topViewbackgroundColor);
       window.setTitleBarOverlay(nativeTheme.shouldUseDarkColors ? TITLE_BAR_OVERLAY.DARK : TITLE_BAR_OVERLAY.LIGHT);
+
+      const titlebar = getTitlebarView(window);
+      const contentViews = getContentViews(window);
+
+      if (titlebar) {
+        titlebar.setBackgroundColor(topViewbackgroundColor);
+      }
+
+      contentViews.forEach((view) => {
+        view.setBackgroundColor(bottomBackgroundColor);
+      });
     });
   }
 }

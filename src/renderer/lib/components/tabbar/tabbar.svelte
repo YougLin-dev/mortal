@@ -10,7 +10,6 @@
 </script>
 
 <script lang="ts">
-  import { TooltipButton } from '$lib/components/ui/tooltip-button';
   import { Separator } from '$lib/components/ui/separator';
   import { cn } from '$lib/utils';
   import { Plus } from '@lucide/svelte';
@@ -84,7 +83,6 @@
           closable={true}
           onTabClick={() => windowStore.activateTab(tab.id)}
           onTabClose={() => windowStore.removeTab(tab.id)}
-          onTabCloseAll={() => windowStore.removeAllTabs()}
         />
         <div class="shrink-0 px-0.5" style="cursor: pointer !important;">
           <Separator
@@ -101,17 +99,14 @@
         class={cn('mx-0.5 !h-[20px] !w-0.5', windowStore.tabs.length === 0 ? 'opacity-0' : 'opacity-100')}
         style="cursor: none !important;"
       />
-      <TooltipButton
-        tooltip="新建标签页"
-        side="bottom"
-        variant="ghost"
-        size="icon"
-        class="size-8 rounded-full transition-colors hover:bg-tabbar-accent hover:text-tabbar-accent-foreground dark:hover:bg-tabbar-accent dark:hover:text-tabbar-accent-foreground"
+      <button
+        title="新建标签页"
+        class="flex size-8 items-center justify-center rounded-full transition-colors hover:bg-tabbar-accent hover:text-tabbar-accent-foreground dark:hover:bg-tabbar-accent dark:hover:text-tabbar-accent-foreground"
         style="app-region: no-drag;"
         onclick={handleNewTab}
       >
         <Plus class="size-4" />
-      </TooltipButton>
+      </button>
     </div>
   </div>
 </div>

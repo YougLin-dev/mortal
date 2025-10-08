@@ -132,7 +132,7 @@
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
 
-  --spacing-titlebar-w: env(titlebar-area-width, 100%);
+  --spacing-titlebar-w: env(titlebar-area-width, calc(100% - 138px));
   --spacing-titlebar-h: env(titlebar-area-height, 46px);
   --spacing-titlebar-area-x: env(titlebar-area-x, 0px);
   --spacing-titlebar-area-y: env(titlebar-area-y, 0px);

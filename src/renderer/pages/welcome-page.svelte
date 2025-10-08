@@ -6,5 +6,5 @@
 <div class="flex h-full w-full flex-col items-center justify-center py-4">
   <h1 class="text-4xl font-bold tracking-tight">{t('welcome.title')}</h1>
   <p class="text-lg text-muted-foreground">{t('welcome.subtitle')}</p>
-  <a use:route href="/chat" class="bg-primary text-primary-foreground hover:bg-primary/90">{t('welcome.learnMore')}</a>
+  <a use:route href="chat" class="bg-primary text-primary-foreground hover:bg-primary/90">{t('welcome.learnMore')}</a>
 </div>

@@ -7,12 +7,14 @@ export class AppProtocol {
   private readonly host: string;
   private readonly preloadFileBasePath: string;
   private readonly rendererFileBasePath: string;
+  private readonly indexHtml: string;
 
-  constructor(schema: string, host: string, preloadFileBasePath: string, rendererFileBasePath: string) {
+  constructor(schema: string, host: string, preloadFileBasePath: string, rendererFileBasePath: string, indexHtml: string) {
     this.schema = schema;
     this.host = host;
     this.preloadFileBasePath = preloadFileBasePath;
     this.rendererFileBasePath = rendererFileBasePath;
+    this.indexHtml = indexHtml;
 
     protocol.registerSchemesAsPrivileged([{ scheme: this.schema, privileges: { standard: true, secure: true } }]);
   }
@@ -34,12 +36,12 @@ export class AppProtocol {
       const decodedPath = decodeURIComponent(rawPathname.replace(/^\//, ''));
 
       // SPA fallback: serve index.html for route-like paths without extension
-      const relativePath = isRoot || extname(decodedPath) === '' ? 'index.html' : decodedPath;
+      const relativePath = isRoot || extname(decodedPath) === '' ? this.indexHtml : decodedPath;
 
       // Prevent path traversal; ensure resolved path stays within the renderer base
       const base = resolve(this.rendererFileBasePath);
       const candidate = resolve(base, normalize(relativePath));
-      const safePath = candidate.startsWith(base) ? candidate : join(base, 'index.html');
+      const safePath = candidate.startsWith(base) ? candidate : join(base, this.indexHtml);
 
       return net.fetch(pathToFileURL(safePath).toString());
     });
