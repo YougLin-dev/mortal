@@ -5,7 +5,7 @@ import { STORAGES } from '@/shared/types/storage-key';
 import type { TranslateFn, Path, Widen } from './types';
 import enMessages from './locales/en';
 import { isDev } from '$lib/utils';
-import { SUPPORTED_LOCALES } from '.';
+import { SUPPORTED_LOCALES } from '@/shared/types/i18n';
 import { getLoggerBy } from '@/shared/logging/helpers';
 
 const logger = getLoggerBy('i18n');
