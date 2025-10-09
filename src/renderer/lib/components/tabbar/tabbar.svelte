@@ -88,7 +88,7 @@
         <TabItem
           {tab}
           stretch={autoStretch}
-          closable={windowStore.tabs.length > 1}
+          closable={true}
           disableHover={isDragging}
           onTabClick={() => windowStore.activateTab(tab.id)}
           onTabClose={() => windowStore.removeTab(tab.id)}

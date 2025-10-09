@@ -193,6 +193,12 @@ class WindowStore {
         logger.error('Failed to switch tab after removal', { error, tabId: newActiveTab.id });
       });
     }
+
+    // If all tabs are closed, create a new tab automatically
+    if (this.tabs.length === 0) {
+      logger.debug('All tabs closed, creating new tab');
+      this.addTab();
+    }
   }
 
   /**
