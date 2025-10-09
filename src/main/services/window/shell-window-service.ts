@@ -88,7 +88,7 @@ export class ShellWindowService {
     menu.popup({ window: window });
   }
 
-  public createWindow(windowState: WindowState): BaseWindow {
+  public createWindow(windowState: WindowState, opts?: { skipActiveTabContent?: boolean }): BaseWindow {
     const windowStateManager = new WindowStateManager({
       windowId: windowState.windowId,
       restoreFullScreen: false,
@@ -96,7 +96,7 @@ export class ShellWindowService {
       defaultState: windowState
     });
 
-    const newWindow = this.#buildWindowByWindowState(windowStateManager);
+    const newWindow = this.#buildWindowByWindowState(windowStateManager, opts);
     windowStateManager.manage(newWindow);
     this.#attachFirstShowGuards(newWindow);
     this.#loadWindow(newWindow, windowStateManager.windowState.tabs);
@@ -162,8 +162,10 @@ export class ShellWindowService {
       if (MAIN_WINDOW_VITE_DEV_SERVER_URL) {
         view.webContents.loadURL(`${MAIN_WINDOW_VITE_DEV_SERVER_URL}/${INDEX.CONTENT}#${url}`);
 
-        view.webContents.on('did-frame-finish-load', () => {
-          view.webContents.openDevTools({ mode: 'detach' });
+        view.webContents.once('did-frame-finish-load', () => {
+          if (!view.webContents.isDestroyed() && !view.webContents.isDevToolsOpened()) {
+            view.webContents.openDevTools({ mode: 'detach' });
+          }
         });
       } else {
         const tabUrl = url.startsWith('/') ? url : `/${url}`;
@@ -180,15 +182,30 @@ export class ShellWindowService {
   public destroyContentView(window: BaseWindow, view: TaggedWebContentsView): void {
     try {
       window.contentView.removeChildView(view);
-      view.webContents.close();
+
+      // Close DevTools if open (dev mode)
+      if (isDev && !view.webContents.isDestroyed() && view.webContents.isDevToolsOpened()) {
+        view.webContents.closeDevTools();
+        logger.debug('Closed DevTools for tab {tabId}', { tabId: view.__tabId });
+      }
+
+      // Close webContents
+      if (!view.webContents.isDestroyed()) {
+        view.webContents.close();
+      }
+
       logger.debug('Destroyed content view for tab {tabId}', { tabId: view.__tabId });
     } catch (error) {
       logger.error('Failed to destroy content view: {error}', { error, tabId: view.__tabId });
     }
   }
 
+  public getWindowId(window: BaseWindow): string | undefined {
+    return this.windows.get(window)?.windowId;
+  }
+
   /// private
-  #buildWindowByWindowState(windowStateManager: WindowStateManager) {
+  #buildWindowByWindowState(windowStateManager: WindowStateManager, opts?: { skipActiveTabContent?: boolean }) {
     const { shouldUseDarkColors } = nativeTheme;
     const newWindow = new BaseWindow({
       show: false,
@@ -262,7 +279,8 @@ export class ShellWindowService {
     const activeTab = windowStateManager.windowState.tabs.find((tab) => tab.isActive);
     let activeTabContentView: null | TaggedWebContentsView = null;
 
-    if (activeTab) {
+    // Skip creating activeTab contentView if requested (e.g., for view migration)
+    if (activeTab && !opts?.skipActiveTabContent) {
       activeTabContentView = this.createContentView(activeTab.id, newWindow);
     }
 
@@ -287,6 +305,53 @@ export class ShellWindowService {
       contentViews.forEach((contentView) =>
         contentView.setBounds({ x: bottomViewLeft, y: topViewHeight, width: newBottomWidth, height: newBottomHeight })
       );
+    });
+
+    // Clean up DevTools when window closes (dev mode)
+    newWindow.on('close', () => {
+      if (!isDev) return;
+
+      const titlebarView = getTitlebarView(newWindow);
+      const contentViews = getContentViews(newWindow);
+      const allViews = [...(titlebarView ? [titlebarView] : []), ...contentViews];
+
+      allViews.forEach((view) => {
+        const wc = view.webContents;
+        if (!wc.isDestroyed() && wc.isDevToolsOpened()) {
+          wc.closeDevTools();
+          logger.debug('Closed DevTools for view {viewType} {tabId}', {
+            viewType: view.__viewType,
+            tabId: view.__tabId
+          });
+        }
+      });
+    });
+
+    // Clean up window reference and storage when closed
+    newWindow.on('closed', () => {
+      const windowId = this.windows.get(newWindow)?.windowId;
+      this.windows.delete(newWindow);
+
+      // Delete window state from storage if not the last window
+      // (Last window's state is handled by window-all-closed event in main.ts)
+      const remainingWindows = BaseWindow.getAllWindows();
+      if (windowId && remainingWindows.length > 0) {
+        // Use async removeItem + immediate flush to ensure deletion
+        storage
+          .removeItem(STORAGES.APP_WINDOWS(windowId))
+          .then(() => {
+            // Force flush to disk immediately
+            return storage.flush();
+          })
+          .then(() => {
+            logger.info('Deleted window state from storage for {windowId}', { windowId });
+          })
+          .catch((error) => {
+            logger.error('Failed to delete window state: {error}', { error, windowId });
+          });
+      }
+
+      logger.debug('Cleaned up window reference');
     });
 
     return newWindow;
@@ -362,16 +427,20 @@ export class ShellWindowService {
     if (loadingView) loadingViewWebContents = loadingView?.webContents;
 
     if (MAIN_WINDOW_VITE_DEV_SERVER_URL) {
-      topWebContents.on('did-frame-finish-load', () => {
-        topWebContents.openDevTools({ mode: 'detach' });
+      topWebContents.once('did-frame-finish-load', () => {
+        if (!topWebContents.isDestroyed() && !topWebContents.isDevToolsOpened()) {
+          topWebContents.openDevTools({ mode: 'detach' });
+        }
       });
       otherContentViewsWebContents.forEach(([tabId, otherContentViewsWebContent]) => {
         const currentTab = tabs.find((t) => t.id === tabId);
         if (currentTab) {
           otherContentViewsWebContent.loadURL(`${MAIN_WINDOW_VITE_DEV_SERVER_URL}/${INDEX.CONTENT}#${currentTab.url}`);
           // dev tools
-          otherContentViewsWebContent.on('did-frame-finish-load', () => {
-            otherContentViewsWebContent.openDevTools({ mode: 'detach' });
+          otherContentViewsWebContent.once('did-frame-finish-load', () => {
+            if (!otherContentViewsWebContent.isDestroyed() && !otherContentViewsWebContent.isDevToolsOpened()) {
+              otherContentViewsWebContent.openDevTools({ mode: 'detach' });
+            }
           });
         }
       });

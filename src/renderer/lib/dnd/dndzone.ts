@@ -3,7 +3,8 @@ export type Orientation = 'horizontal' | 'vertical';
 export const TRIGGERS = {
   DRAG_STARTED: 'DRAG_STARTED',
   DRAGGED_OVER_INDEX: 'DRAGGED_OVER_INDEX',
-  DRAG_STOPPED: 'DRAG_STOPPED'
+  DRAG_STOPPED: 'DRAG_STOPPED',
+  DRAG_OUT: 'DRAG_OUT'
 } as const;
 
 export const ATTRIBUTE_ID_NAME = 'data-id';
@@ -23,6 +24,11 @@ export interface DndZoneOptions<T> {
    * If not provided, defaults to 5.
    */
   dragStartThreshold?: number;
+  /**
+   * Pixels of vertical overflow threshold for detecting out-of-zone drag.
+   * If not provided, defaults to 12.
+   */
+  outOfZoneThreshold?: number;
 }
 
 export interface DndInfo {
@@ -31,6 +37,13 @@ export interface DndInfo {
   fromIndex?: number;
   toIndex?: number;
   draggable?: HTMLElement | null;
+  outOfZone?: boolean;
+  pointer?: {
+    clientX: number;
+    clientY: number;
+    screenX: number;
+    screenY: number;
+  };
 }
 
 export interface DndEvent<T> {
@@ -96,6 +109,12 @@ export function dndzone<T>(element: HTMLElement, options: DndZoneOptions<T>) {
   let startClientY = 0;
   let hasPointerMovedBeyondThreshold = false;
   let dragStartThreshold = options.dragStartThreshold ?? 5; // Movement needed before starting drag
+  let outOfZoneThreshold = options.outOfZoneThreshold ?? 12;
+  let isOutOfZone = false;
+  let lastClientX = 0;
+  let lastClientY = 0;
+  let lastScreenX = 0;
+  let lastScreenY = 0;
   let baseLeft = 0;
   let baseTop = 0;
   let containerRect: DOMRect | null = null;
@@ -303,7 +322,14 @@ export function dndzone<T>(element: HTMLElement, options: DndZoneOptions<T>) {
     if (finalize) {
       const detail: DndEvent<T> = {
         items,
-        info: { trigger: TRIGGERS.DRAG_STOPPED, id: draggedId, fromIndex, draggable: draggedEl }
+        info: {
+          trigger: TRIGGERS.DRAG_STOPPED,
+          id: draggedId,
+          fromIndex,
+          outOfZone: isOutOfZone,
+          pointer: isOutOfZone ? { clientX: lastClientX, clientY: lastClientY, screenX: lastScreenX, screenY: lastScreenY } : undefined,
+          draggable: draggedEl
+        }
       };
       element.dispatchEvent(new CustomEvent('finalize', { detail }));
       requestAnimationFrame(finalizeCleanupWithAnimation);
@@ -398,6 +424,35 @@ export function dndzone<T>(element: HTMLElement, options: DndZoneOptions<T>) {
     draggedEl.style.left = `${left}px`;
     draggedEl.style.top = `${top}px`;
 
+    // Record pointer position for potential out-of-zone event
+    lastClientX = ev.clientX;
+    lastClientY = ev.clientY;
+    lastScreenX = ev.screenX;
+    lastScreenY = ev.screenY;
+
+    // Detect out-of-zone (vertical overflow for horizontal orientation)
+    const wasOutOfZone = isOutOfZone;
+    if (orientation === 'horizontal' && containerRect) {
+      isOutOfZone = ev.clientY < containerRect.top - outOfZoneThreshold || ev.clientY > containerRect.bottom + outOfZoneThreshold;
+    } else {
+      isOutOfZone = false;
+    }
+
+    if (isOutOfZone !== wasOutOfZone && isOutOfZone) {
+      const detail: DndEvent<T> = {
+        items: items.slice(),
+        info: {
+          trigger: TRIGGERS.DRAG_OUT,
+          id: draggedId,
+          fromIndex,
+          outOfZone: true,
+          pointer: { clientX: ev.clientX, clientY: ev.clientY, screenX: ev.screenX, screenY: ev.screenY },
+          draggable: draggedEl
+        }
+      };
+      element.dispatchEvent(new CustomEvent('consider', { detail }));
+    }
+
     // Determine new index based on pointer
     const targetIndex = computeTargetIndex(ev.clientX, ev.clientY);
     if (targetIndex < 0 || fromIndex < 0) return;
@@ -474,6 +529,7 @@ export function dndzone<T>(element: HTMLElement, options: DndZoneOptions<T>) {
       if (newOptions.animationDuration !== undefined) animationDuration = newOptions.animationDuration;
       if (newOptions.animationEasing !== undefined) animationEasing = newOptions.animationEasing;
       if (newOptions.dragStartThreshold !== undefined) dragStartThreshold = newOptions.dragStartThreshold;
+      if (newOptions.outOfZoneThreshold !== undefined) outOfZoneThreshold = newOptions.outOfZoneThreshold;
     },
     destroy() {
       element.removeEventListener('pointerdown', onPointerdDown);

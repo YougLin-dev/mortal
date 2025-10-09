@@ -13,7 +13,7 @@
   import { Separator } from '$lib/components/ui/separator';
   import { cn, isMac } from '$lib/utils';
   import { Plus } from '@lucide/svelte';
-  import { dndzone } from '$lib/dnd';
+  import { dndzone, TRIGGERS } from '$lib/dnd';
   import { cubicOut } from 'svelte/easing';
 
   function slideExpand(node: Element, { duration = 300, easing = cubicOut } = {}) {
@@ -36,6 +36,7 @@
   let { class: className, autoStretch = false }: Props = $props();
 
   let isDragging = $state(false);
+  let isDraggingOut = $state(false);
 
   function handleNewTab() {
     windowStore.addTab();
@@ -46,6 +47,8 @@
     if (info.trigger === 'DRAG_STARTED') {
       isDragging = true;
       windowStore.reorderTabs(newItems, info.id);
+    } else if (info.trigger === TRIGGERS.DRAG_OUT) {
+      isDraggingOut = true;
     } else {
       windowStore.reorderTabs(newItems, info.id);
     }
@@ -54,6 +57,27 @@
   function handleDndFinalize(e: CustomEvent<TabDndEvent>) {
     const { info, items: newItems } = e.detail;
     isDragging = false;
+    isDraggingOut = false;
+
+    // If dragged out of zone, detach to new window
+    if (info.outOfZone && info.id && info.pointer) {
+      console.log('Tab dragged out, detaching to new window:', info.id);
+      window.tabService
+        .detachToNewWindow(info.id, { screenX: info.pointer.screenX, screenY: info.pointer.screenY })
+        .then((result) => {
+          if (result) {
+            console.log('Tab successfully detached to new window:', result.newWindowId);
+          } else {
+            console.error('Failed to detach tab to new window');
+          }
+        })
+        .catch((error) => {
+          console.error('Error detaching tab:', error);
+        });
+      return; // Don't reorder if detaching
+    }
+
+    // Normal reorder
     windowStore.reorderTabs(newItems, info.id);
   }
 </script>
@@ -89,7 +113,7 @@
           {tab}
           stretch={autoStretch}
           closable={true}
-          disableHover={isDragging}
+          disableHover={isDragging || isDraggingOut}
           onTabClick={() => windowStore.activateTab(tab.id)}
           onTabClose={() => windowStore.removeTab(tab.id)}
         />

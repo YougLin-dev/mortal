@@ -1,4 +1,5 @@
 import type { ThemeState } from '@/shared/types/theme';
+import type { WindowState } from '@/shared/types/window';
 import type { StorageValue } from 'electron-async-storage';
 
 export const UNIFIED_EVENT_CHANNEL = 'unified-channel';
@@ -7,7 +8,9 @@ export const GLOBAL_EVENTS = {
   THEME_CHANGED: 'theme-changed',
   THEME_ERROR: 'theme-error',
   STORAGE_PREFIX: 'storage:*',
-  TAB_CONTEXT_MENU_ACTION: 'tab-context-menu-action'
+  TAB_CONTEXT_MENU_ACTION: 'tab-context-menu-action',
+  TAB_DETACHED: 'tab-detached',
+  WINDOW_STATE_UPDATE: 'window-state-update'
 } as const;
 
 export interface GlobalEventDataMap {
@@ -20,6 +23,12 @@ export interface GlobalEventDataMap {
 
   // tab context menu
   [GLOBAL_EVENTS.TAB_CONTEXT_MENU_ACTION]: { action: string; tabId?: string };
+
+  // tab detached
+  [GLOBAL_EVENTS.TAB_DETACHED]: { tabId: string; newWindowId: string };
+
+  // window state
+  [GLOBAL_EVENTS.WINDOW_STATE_UPDATE]: { windowState: WindowState };
 
   [key: string]: unknown;
   [key: symbol]: unknown;

@@ -8,7 +8,9 @@ import { GLOBAL_EVENTS } from '@/shared/types/event';
 
 const logger = getLoggerBy('store', 'window');
 
-const initialWindowState = superjson.parse(superjson.stringify(window.windowState)) as WindowState;
+// Allow null windowState for migrated views before update
+const initialWindowState = window.windowState ? (superjson.parse(superjson.stringify(window.windowState)) as WindowState) : null;
+
 /**
  * WindowStore manages window state and tab navigation.
  *
@@ -17,6 +19,7 @@ const initialWindowState = superjson.parse(superjson.stringify(window.windowStat
  * - Always-on-top window control
  * - Automatic persistence to Electron storage
  * - URL synchronization with active tab
+ * - Dynamic windowState updates for migrated views
  *
  * @example
  * ```ts
@@ -31,10 +34,57 @@ const initialWindowState = superjson.parse(superjson.stringify(window.windowStat
  * ```
  */
 class WindowStore {
-  #persisted: PersistedStore<WindowState>;
+  #persisted?: PersistedStore<WindowState>;
+  #memory: WindowState;
 
   constructor() {
-    this.#persisted = new PersistedStore<WindowState>(STORAGES.APP_WINDOWS(initialWindowState.windowId), initialWindowState);
+    // Use a transient state if windowState is not available yet
+    const defaultState: WindowState = {
+      windowId: '__pending__',
+      type: 'main',
+      x: 0,
+      y: 0,
+      width: 800,
+      height: 600,
+      isMaximized: false,
+      isMinimized: false,
+      isFullScreen: false,
+      isAlwaysOnTop: false,
+      tabs: []
+    };
+
+    this.#memory = initialWindowState ?? defaultState;
+
+    if (initialWindowState && initialWindowState.windowId !== '__pending__') {
+      this.#persisted = new PersistedStore<WindowState>(STORAGES.APP_WINDOWS(initialWindowState.windowId), initialWindowState);
+    }
+
+    // Listen for window state updates (e.g., when view is migrated)
+    window.events.on(GLOBAL_EVENTS.WINDOW_STATE_UPDATE, ({ windowState }) => {
+      this.#applyNewState(windowState);
+    });
+  }
+
+  /**
+   * Apply a new window state (e.g., after view migration)
+   */
+  #applyNewState(newState: WindowState): void {
+    logger.info('Applying new window state', {
+      oldWindowId: this.#memory.windowId,
+      newWindowId: newState.windowId
+    });
+
+    this.#memory = newState;
+
+    // Rebind persisted store if windowId changed
+    const key = STORAGES.APP_WINDOWS(newState.windowId);
+    if (!this.#persisted || this.#persisted.current.windowId !== newState.windowId) {
+      logger.debug('Rebinding PersistedStore with new windowId', { windowId: newState.windowId });
+      this.#persisted = new PersistedStore<WindowState>(key, newState);
+    } else {
+      // Same window, just update state
+      this.#persisted.current = newState;
+    }
   }
 
   // ============================================================================
@@ -45,14 +95,17 @@ class WindowStore {
    * Get the full window state
    */
   get state(): WindowState {
-    return this.#persisted.current;
+    return this.#persisted?.current ?? this.#memory;
   }
 
   /**
    * Update the full window state
    */
   set state(newState: WindowState) {
-    this.#persisted.current = newState;
+    if (this.#persisted) {
+      this.#persisted.current = newState;
+    }
+    this.#memory = newState;
   }
 
   // ============================================================================
@@ -202,6 +255,46 @@ class WindowStore {
   }
 
   /**
+   * Remove a tab locally without destroying its WebContentsView
+   * Used when tab is detached to another window
+   */
+  removeTabLocally(tabId: string): void {
+    logger.debug('Removing tab locally (no view destruction)', { tabId });
+
+    const removedIndex = this.tabs.findIndex((t) => t.id === tabId);
+    if (removedIndex === -1) {
+      logger.warn('Tab not found for local removal', { tabId });
+      return;
+    }
+
+    const wasActive = this.tabs[removedIndex]?.isActive;
+
+    // Remove the tab from state
+    this.tabs = this.tabs.filter((t) => t.id !== tabId);
+
+    // If the removed tab was active and there are still tabs left, activate another one
+    if (wasActive && this.tabs.length > 0) {
+      const newActiveIndex = Math.min(removedIndex, this.tabs.length - 1);
+      const newActiveTab = this.tabs[newActiveIndex];
+      this.tabs = this.tabs.map((t, i) => ({
+        ...t,
+        isActive: i === newActiveIndex
+      }));
+
+      // Switch to the newly activated tab
+      window.tabService.switchTab(newActiveTab.id, newActiveTab.url).catch((error) => {
+        logger.error('Failed to switch tab after local removal', { error, tabId: newActiveTab.id });
+      });
+    }
+
+    // If all tabs are closed, create a new tab automatically
+    if (this.tabs.length === 0) {
+      logger.debug('All tabs closed after detach, creating new tab');
+      this.addTab();
+    }
+  }
+
+  /**
    * Remove all tabs
    */
   removeAllTabs(): void {
@@ -258,4 +351,9 @@ window.events.on(GLOBAL_EVENTS.TAB_CONTEXT_MENU_ACTION, ({ action, tabId }) => {
     const allTabs = [...windowStore.tabs];
     allTabs.forEach((tab) => windowStore.removeTab(tab.id));
   }
+});
+
+window.events.on(GLOBAL_EVENTS.TAB_DETACHED, ({ tabId, newWindowId }) => {
+  logger.info('Tab detached event received', { tabId, newWindowId });
+  windowStore.removeTabLocally(tabId);
 });

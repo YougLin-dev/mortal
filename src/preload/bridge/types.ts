@@ -23,6 +23,7 @@ declare global {
     tabService: {
       switchTab: (tabId: string, tabUrl: string) => Promise<void>;
       closeTab: (tabId: string) => Promise<void>;
+      detachToNewWindow: (tabId: string, pointer?: { screenX: number; screenY: number }) => Promise<{ newWindowId: string } | null>;
     };
 
     storageService: {
@@ -47,7 +48,7 @@ declare global {
     ipcFetch: (url: string, init?: RequestInit) => Promise<Response>;
     electron: ElectronAPI;
     events: Emitter<GlobalEventDataMap>;
-    windowState: WindowState;
+    windowState: WindowState | null;
     locale: string;
   }
 }
