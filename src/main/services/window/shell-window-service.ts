@@ -115,6 +115,7 @@ export class ShellWindowService {
 
     const windowState = storage.getSync(STORAGES.APP_WINDOWS(windowId));
     const [width, height] = window.getSize();
+    const bottomWidth = width - bottomViewPadding * 2;
     const bottomHeight = height - topViewHeight - bottomViewPadding;
 
     const view = tagView(
@@ -135,7 +136,7 @@ export class ShellWindowService {
 
     const backgroundColor = isMac ? '#ffffff' : shouldUseDarkColors ? WIN.BACKGROUND_CORLOR.DARK : WIN.BACKGROUND_CORLOR.LIGHT;
     view.setBackgroundColor(backgroundColor);
-    view.setBounds({ x: bottomViewLeft, y: topViewHeight, width, height: bottomHeight });
+    view.setBounds({ x: bottomViewLeft, y: topViewHeight, width: bottomWidth, height: bottomHeight });
 
     return view;
   }
