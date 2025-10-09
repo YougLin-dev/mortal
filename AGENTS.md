@@ -10,6 +10,7 @@ This file provides guidance to AI coding assistants when working with code in th
 - `pnpm run lint` - Run ESLint with auto-fix
 - `pnpm run format` - Format code with Prettier
 - `pnpm run check` - Run Svelte type checking and TypeScript compilation
+- `pnpm mastra:dev` - Start Mastra development server with inspector
 
 ### Build and Package
 
@@ -33,7 +34,41 @@ src/
 
 ### Key Architectural Patterns
 
-#### 1. HTTP-Style IPC Router System
+#### 1. Multi-Window Shell Architecture
+
+The app uses a **BaseWindow + WebContentsView architecture** instead of traditional BrowserWindow, enabling true multi-window and multi-tab support:
+
+- **BaseWindow**: Serves as the shell container for views
+- **WebContentsView**: Separate views for titlebar, content, and loading states
+- **View Tagging System**: Tracks views across windows with `__viewType` and `__tabId` tags
+- **Independent Views**: Each tab gets its own WebContentsView, enabling isolated rendering
+- **Multi-Protocol Support**: Separate protocols for titlebar (`titlebar://`), content (`content://`), and loading (`loading://`)
+
+**Key files:**
+
+- Shell window service: `src/main/services/window/shell-window-service.ts`
+- View utilities: `src/shared/types/view.ts`
+- Protocol handlers: `src/main/core/protocols/app-protocol.ts`
+
+**View hierarchy example:**
+
+```
+BaseWindow (shell container)
+├── WebContentsView (titlebar) - Fixed at top
+├── WebContentsView (content, tab1) - Active tab
+├── WebContentsView (content, tab2) - Background tab
+└── WebContentsView (loading) - Loading placeholder
+```
+
+**Benefits:**
+
+- True multi-tab support with isolated rendering contexts
+- Shared titlebar across all tabs
+- Smooth tab switching with loading states
+- Better memory management per tab
+- Enables future multi-window scenarios
+
+#### 2. HTTP-Style IPC Router System
 
 The app features a **full-featured HTTP router built on top of IPC**, enabling REST-like API patterns within Electron:
 
@@ -137,7 +172,8 @@ export class ExampleService {
 
 - `window.systemService` - System operations, logging, notifications
 - `window.themeService` - Theme management
-- `window.windowService` - Window controls (always-on-top, etc.)
+- `window.shellWindowService` - Window controls (always-on-top, tab context menu)
+- `window.tabService` - Tab switching and lifecycle management
 - `window.storageService` - Key-value storage operations
 - `window.eventEmitterService` - Event broadcasting
 
@@ -179,7 +215,27 @@ The app implements a **custom protocol handler** for loading renderer files:
 - **Security**: Path traversal protection ensures files stay within renderer base
 - **Location**: `src/main/core/protocols/app-protocol.ts`
 
-#### 5. LogTape Logging System
+#### 5. Platform Utilities
+
+The app uses **custom platform utilities** for cross-platform compatibility:
+
+- **Platform detection** (`src/main/utils/platform.ts`): Exports `platform`, `isMac`, `isWindows`, `isLinux`
+- **Dev mode detection** (`src/main/utils/dev.ts`): Exports `isDev` for environment checks
+- **Titlebar offset calculations**: Platform-specific adjustments for window chrome
+- **Replaces**: Previously used `@electron-toolkit/utils`, now using custom lightweight utilities
+
+**Usage example:**
+
+```typescript
+import { isMac, isWindows } from '@/main/utils/platform';
+import { isDev } from '@/main/utils/dev';
+
+if (isMac) {
+  // macOS-specific code
+}
+```
+
+#### 6. LogTape Logging System
 
 The app uses **LogTape** for structured logging across all processes:
 
@@ -202,15 +258,15 @@ logger.info('Message with {placeholder}', { placeholder: 'value' });
 logger.error('Error occurred: {error}', { error });
 ```
 
-#### 6. Window State Management
+#### 7. Window State Management
 
 - **WindowStateManager** (`src/main/services/window/window-state-manager.ts`): Persists window positions/sizes
-- **WindowService** (`src/main/services/window/window-service.ts`): Manages window creation and always-on-top functionality
+- **ShellWindowService** (`src/main/services/window/shell-window-service.ts`): Manages window creation, always-on-top functionality, and tab context menus
 - **State injection**: Window state passed via preload arguments (`windowState` global)
 - **Auto-save**: Window states saved on `window-all-closed` event
 - Supports multiple window instances with individual state tracking
 
-#### 7. Storage System
+#### 8. Storage System
 
 - **Async storage** (`electron-async-storage`): Cross-platform key-value storage
 - **Migration support**: Automatic schema migrations via `storage.migrate()`
@@ -234,7 +290,7 @@ await storage.migrate();
 
 Storage is initialized in `src/main/core/storage/config.ts` with migration hooks.
 
-#### 8. Frontend Architecture (Svelte 5)
+#### 9. Frontend Architecture (Svelte 5)
 
 - **Router**: `@mateothegreat/svelte5-router` for page navigation
 - **Pages**: `src/renderer/pages/` - Main application pages
@@ -259,8 +315,10 @@ Storage is initialized in `src/main/core/storage/config.ts` with migration hooks
   - Tab state stored in window state
   - Each tab has id, name, active status, pinned status, and URL
   - Tab reordering via drag-and-drop
+  - Always maintains at least one tab (auto-creates new tab when last tab is closed)
+  - Tab close button always visible for flexibility
 
-#### 9. Event Broadcasting System
+#### 10. Event Broadcasting System
 
 The app uses a **unified event channel** for cross-process communication:
 
@@ -288,7 +346,7 @@ window.events.on('theme-changed', (themeState) => {
 await eventEmitterService.emitAll('theme-changed', themeState);
 ```
 
-#### 10. Internationalization (i18n)
+#### 11. Internationalization (i18n)
 
 - **Type-safe i18n** with Svelte 5 runes
 - **Lazy loading**: Non-default locales loaded on demand
