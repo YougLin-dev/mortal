@@ -3,6 +3,7 @@
     tab: Tab;
     stretch?: boolean;
     closable: boolean;
+    disableHover?: boolean;
     onTabClick: (tab: Tab) => void;
     onTabClose: (tab: Tab) => void;
     class?: string;
@@ -16,7 +17,7 @@
   import type { Tab } from '@/shared/types/window';
   import { X } from '@lucide/svelte';
 
-  const { tab, stretch = false, closable, onTabClick, onTabClose, class: className }: Props = $props();
+  const { tab, stretch = false, closable, disableHover = false, onTabClick, onTabClose, class: className }: Props = $props();
 
   async function handleContextMenu(e: MouseEvent) {
     e.preventDefault();
@@ -39,7 +40,9 @@
   class={cn(
     'relative flex h-8 cursor-pointer items-center justify-center overflow-hidden rounded-lg px-2 text-sm ',
     stretch ? 'w-auto min-w-4' : 'w-32',
-    tab.isActive ? 'bg-tabbar-active text-tabbar-active-foreground' : 'transition-colors hover:bg-tabbar-accent  hover:text-tabbar-accent-foreground',
+    tab.isActive
+      ? 'bg-tabbar-active text-tabbar-active-foreground'
+      : !disableHover && 'transition-colors hover:bg-tabbar-accent  hover:text-tabbar-accent-foreground',
     className
   )}
   style="app-region: no-drag;"

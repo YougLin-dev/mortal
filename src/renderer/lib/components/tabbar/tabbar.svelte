@@ -35,17 +35,25 @@
 
   let { class: className, autoStretch = false }: Props = $props();
 
+  let isDragging = $state(false);
+
   function handleNewTab() {
     windowStore.addTab();
   }
 
   function handleDndConsider(e: CustomEvent<TabDndEvent>) {
     const { info, items: newItems } = e.detail;
-    if (info.trigger === 'DRAG_STARTED') windowStore.reorderTabs(newItems, info.id);
+    if (info.trigger === 'DRAG_STARTED') {
+      isDragging = true;
+      windowStore.reorderTabs(newItems, info.id);
+    } else {
+      windowStore.reorderTabs(newItems, info.id);
+    }
   }
 
   function handleDndFinalize(e: CustomEvent<TabDndEvent>) {
     const { info, items: newItems } = e.detail;
+    isDragging = false;
     windowStore.reorderTabs(newItems, info.id);
   }
 </script>
@@ -80,7 +88,8 @@
         <TabItem
           {tab}
           stretch={autoStretch}
-          closable={true}
+          closable={windowStore.tabs.length > 1}
+          disableHover={isDragging}
           onTabClick={() => windowStore.activateTab(tab.id)}
           onTabClose={() => windowStore.removeTab(tab.id)}
         />
