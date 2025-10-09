@@ -88,7 +88,7 @@
     "@mastra/core": "^0.20.0",
     "@mateothegreat/svelte5-router": "^2.16.19",
     "ai": "^5.0.60",
-    "electron-async-storage": "^0.0.3",
+    "electron-async-storage": "^0.0.5",
     "electron-squirrel-startup": "^1.0.1",
     "es-toolkit": "^1.39.10",
     "mitt": "^3.0.1",

@@ -33,8 +33,8 @@ importers:
         specifier: ^5.0.60
         version: 5.0.60(zod@4.1.11)
       electron-async-storage:
-        specifier: ^0.0.3
-        version: 0.0.3
+        specifier: ^0.0.5
+        version: 0.0.5
       electron-squirrel-startup:
         specifier: ^1.0.1
         version: 1.0.1
@@ -2899,8 +2899,8 @@ packages:
   ee-first@1.1.1:
     resolution: {integrity: sha512-WMwm9LhRUo+WUaRN+vRuETqG89IgZphVSNkdFgeb6sS/E4OrDIN7t48CAewSHXc6C8lefD8KKfr5vY61brQlow==}
 
-  electron-async-storage@0.0.3:
-    resolution: {integrity: sha512-3ya8MpSZA/7KqYEBrwryOmW8cD0kd46gTKXTwM30y26fmsJeTjFcAU1N5paGdiqiS5ThM3UjP0RJ+NKFxxQGOA==}
+  electron-async-storage@0.0.5:
+    resolution: {integrity: sha512-rhrLurklXXFVzHwEvUA2ygAo674YKJbUB0eyOALkCQuDT6emdhH+O6OOomsp55ubu1K6VGdDNmsVDZh3GJanXw==}
 
   electron-installer-common@0.10.4:
     resolution: {integrity: sha512-8gMNPXfAqUE5CfXg8RL0vXpLE9HAaPkgLXVoHE3BMUzogMWenf4LmwQ27BdCUrEhkjrKl+igs2IHJibclR3z3Q==}
@@ -8937,7 +8937,7 @@ snapshots:
 
   ee-first@1.1.1: {}
 
-  electron-async-storage@0.0.3:
+  electron-async-storage@0.0.5:
     dependencies:
       anymatch: 3.1.3
       chokidar: 4.0.3

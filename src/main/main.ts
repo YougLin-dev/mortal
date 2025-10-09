@@ -48,6 +48,7 @@ if (!gotTheLock) {
 
   app.whenReady().then(async () => {
     await storage.migrate();
+    await storage.flush();
 
     setupIPC();
     setupRouter();

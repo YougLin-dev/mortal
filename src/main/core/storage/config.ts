@@ -45,6 +45,7 @@ export const storage = createStorage<APPStorage>({
         // @ts-expect-error only init type and tabs
         await s.setItem(STORAGES.APP_WINDOWS('main'), {
           type: 'main',
+          windowId: 'main',
           tabs: [
             {
               id: nanoid(),
