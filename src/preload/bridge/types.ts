@@ -9,6 +9,8 @@ import type { IpcResponse, StreamController } from '@/shared/types/router';
 
 declare global {
   interface Window {
+    platform: string;
+
     themeService: {
       setTheme: (theme: ThemeType) => Promise<void>;
     };
@@ -46,7 +48,6 @@ declare global {
     electron: ElectronAPI;
     events: Emitter<GlobalEventDataMap>;
     windowState: WindowState;
-    isMac: boolean;
     locale: string;
   }
 }

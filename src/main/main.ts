@@ -6,7 +6,7 @@ import { setupIPC } from './core/ipc/setup';
 import { setupRouter } from './core/router/setup';
 import { storage } from './core/storage/config';
 import { WindowStateManager } from './services/window/window-state-manager';
-import { platform } from '@electron-toolkit/utils';
+import { isMac } from '@/main/utils/platform';
 import { initLogging } from '@/shared/logging/config';
 import { getLoggerBy } from '@/shared/logging/helpers';
 import { setupProtocolHandlers, shellWindowService } from './services/window/shell-window-service';
@@ -62,7 +62,7 @@ if (!gotTheLock) {
     logger.info('wait for storage dispose');
     await storage.dispose();
     logger.info('storage disposed');
-    if (!platform.isMacOS) {
+    if (!isMac) {
       app.quit();
     }
   });

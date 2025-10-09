@@ -5,7 +5,8 @@ import { getLoggerBy } from '@/shared/logging/helpers';
 import { getContentViews, getTitlebarView, getWindowByWebContents, tagView, type TaggedWebContentsView } from '@/shared/types/view';
 import type { Tab, WindowState } from '@/shared/types/window';
 import { toArgument } from '@/shared/utils/preload-utils';
-import { is, platform } from '@electron-toolkit/utils';
+import { isDev } from '@/main/utils/dev';
+import { isMac } from '@/main/utils/platform';
 import { BaseWindow, Menu, nativeTheme, WebContentsView, type IpcMainInvokeEvent, type WebContents } from 'electron';
 import * as path from 'node:path';
 import { WindowStateManager } from './window-state-manager';
@@ -124,19 +125,15 @@ export class ShellWindowService {
           contextIsolation: true,
           allowRunningInsecureContent: false,
           experimentalFeatures: false,
-          devTools: is.dev,
-          additionalArguments: [
-            toArgument('windowState', windowState),
-            toArgument('isMac', platform.isMacOS),
-            toArgument('locale', storage.getSync(STORAGES.APP_I18N_LOCALE))
-          ]
+          devTools: isDev,
+          additionalArguments: [toArgument('windowState', windowState), toArgument('locale', storage.getSync(STORAGES.APP_I18N_LOCALE))]
         }
       }),
       'content',
       tabId
     );
 
-    const backgroundColor = platform.isMacOS ? '#ffffff' : shouldUseDarkColors ? WIN.BACKGROUND_CORLOR.DARK : WIN.BACKGROUND_CORLOR.LIGHT;
+    const backgroundColor = isMac ? '#ffffff' : shouldUseDarkColors ? WIN.BACKGROUND_CORLOR.DARK : WIN.BACKGROUND_CORLOR.LIGHT;
     view.setBackgroundColor(backgroundColor);
     view.setBounds({ x: bottomViewLeft, y: topViewHeight, width, height: bottomHeight });
 
@@ -202,10 +199,10 @@ export class ShellWindowService {
       minHeight: WIN.MIN_HEIGHT,
       fullscreen: windowStateManager.isFullScreen,
       alwaysOnTop: windowStateManager.isAlwaysOnTop,
-      backgroundColor: platform.isMacOS ? undefined : shouldUseDarkColors ? WIN.BACKGROUND_CORLOR.DARK : WIN.BACKGROUND_CORLOR.LIGHT,
+      backgroundColor: isMac ? undefined : shouldUseDarkColors ? WIN.BACKGROUND_CORLOR.DARK : WIN.BACKGROUND_CORLOR.LIGHT,
       autoHideMenuBar: true,
-      titleBarStyle: platform.isMacOS ? 'hiddenInset' : 'hidden',
-      titleBarOverlay: !platform.isMacOS ? (shouldUseDarkColors ? TITLE_BAR_OVERLAY.DARK : TITLE_BAR_OVERLAY.LIGHT) : undefined,
+      titleBarStyle: isMac ? 'hiddenInset' : 'hidden',
+      titleBarOverlay: !isMac ? (shouldUseDarkColors ? TITLE_BAR_OVERLAY.DARK : TITLE_BAR_OVERLAY.LIGHT) : undefined,
       darkTheme: shouldUseDarkColors,
       frame: false,
       transparent: false,
@@ -214,17 +211,13 @@ export class ShellWindowService {
 
     this.windows.set(newWindow, { windowId: windowStateManager.windowState.windowId });
 
-    const topViewBackgroundColor = platform.isMacOS ? '#ffffff' : shouldUseDarkColors ? WIN.BACKGROUND_CORLOR.DARK : WIN.BACKGROUND_CORLOR.LIGHT;
+    const topViewBackgroundColor = isMac ? '#ffffff' : shouldUseDarkColors ? WIN.BACKGROUND_CORLOR.DARK : WIN.BACKGROUND_CORLOR.LIGHT;
     const bottomBackgroundColor = topViewBackgroundColor;
 
     const bottomViewWidth = windowStateManager.width - bottomViewPadding * 2;
     const bottomViewHeight = windowStateManager.height - topViewHeight - bottomViewPadding;
 
-    const argumenst = [
-      toArgument('windowState', windowStateManager.windowState),
-      toArgument('isMac', platform.isMacOS),
-      toArgument('locale', storage.getSync(STORAGES.APP_I18N_LOCALE))
-    ];
+    const argumenst = [toArgument('windowState', windowStateManager.windowState), toArgument('locale', storage.getSync(STORAGES.APP_I18N_LOCALE))];
 
     // titlebar
     const topView = tagView(
@@ -235,7 +228,7 @@ export class ShellWindowService {
           contextIsolation: true,
           allowRunningInsecureContent: false,
           experimentalFeatures: false,
-          devTools: is.dev,
+          devTools: isDev,
           additionalArguments: argumenst
         }
       }),
@@ -254,7 +247,7 @@ export class ShellWindowService {
           contextIsolation: true,
           allowRunningInsecureContent: false,
           experimentalFeatures: false,
-          devTools: is.dev,
+          devTools: isDev,
           additionalArguments: argumenst
         }
       }),

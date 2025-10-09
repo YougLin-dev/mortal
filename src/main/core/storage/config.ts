@@ -1,5 +1,5 @@
 import { STORAGES, type APPStorage } from '@/shared/types/storage-key';
-import { is } from '@electron-toolkit/utils';
+import { isDev } from '@/main/utils/dev';
 import { createStorage } from 'electron-async-storage';
 import fsDriver from 'electron-async-storage/drivers/fs';
 import queueDriver from 'electron-async-storage/drivers/queue';
@@ -13,7 +13,7 @@ import { getLoggerBy } from '@/shared/logging/helpers';
 const logger = getLoggerBy('storage', 'migration');
 
 const devStoragePath = join(cwd(), 'data/storage');
-const storagePath = is.dev ? devStoragePath : join(app.getPath('userData'), 'storage');
+const storagePath = isDev ? devStoragePath : join(app.getPath('userData'), 'storage');
 
 export const storage = createStorage<APPStorage>({
   driver: queueDriver({

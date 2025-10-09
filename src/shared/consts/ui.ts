@@ -1,5 +1,3 @@
-import { platform } from '@electron-toolkit/utils';
-
 export const WIN = {
   MIN_WIDTH: 800,
   MIN_HEIGHT: 600,
@@ -16,7 +14,7 @@ export const WIN = {
 export const TITLE_BAR_OVERLAY = {
   DARK: {
     height: 46,
-    color: platform.isWindows ? 'rgba(0,0,0,0)' : 'rgba(255,255,255,0)',
+    color: 'rgba(0,0,0,0)',
     symbolColor: '#fff'
   },
   LIGHT: {
@@ -24,4 +22,9 @@ export const TITLE_BAR_OVERLAY = {
     color: 'rgba(255,255,255,0)',
     symbolColor: '#000'
   }
+} as const;
+
+export const TITLEBAR_CONTROLS_WIDTH = {
+  LINUX: 96,
+  WINDOWS: 138
 } as const;

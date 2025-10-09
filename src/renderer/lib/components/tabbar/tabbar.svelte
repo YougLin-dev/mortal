@@ -11,7 +11,7 @@
 
 <script lang="ts">
   import { Separator } from '$lib/components/ui/separator';
-  import { cn } from '$lib/utils';
+  import { cn, isMac } from '$lib/utils';
   import { Plus } from '@lucide/svelte';
   import { dndzone } from '$lib/dnd';
   import { cubicOut } from 'svelte/easing';
@@ -54,7 +54,7 @@
   <div
     class={cn(
       'flex h-full min-w-full items-center gap-1 overflow-x-hidden px-4 outline-none focus:outline-none focus-visible:outline-none',
-      window.isMac && 'pl-[80px]'
+      isMac && 'pl-[80px]'
     )}
     use:dndzone={{
       items: windowStore.tabs,

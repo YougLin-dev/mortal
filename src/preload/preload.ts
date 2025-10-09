@@ -13,7 +13,6 @@ initLogging('preload');
 const logger = getLoggerBy('preload', 'bridge');
 
 const windowState = getArgumentValue<WindowState>('windowState');
-const isMac = getArgumentValue<boolean>('isMac');
 const locale = getArgumentValue<string>('locale');
 
 setupEventForwarding();
@@ -33,5 +32,5 @@ contextBridge.exposeInMainWorld('_abortIpcRequest', abortIpcRequest);
 contextBridge.exposeInMainWorld('events', globalEmitter);
 contextBridge.exposeInMainWorld('electron', electronAPI);
 contextBridge.exposeInMainWorld('windowState', windowState);
-contextBridge.exposeInMainWorld('isMac', isMac);
 contextBridge.exposeInMainWorld('locale', locale);
+contextBridge.exposeInMainWorld('platform', process.platform);
