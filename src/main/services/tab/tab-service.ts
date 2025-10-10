@@ -113,10 +113,7 @@ export class TabService {
     }
 
     const view = getContentViewByTabId(originWindow, tabId);
-    if (!view) {
-      logger.error('Content view not found for tab {tabId}', { tabId });
-      return null;
-    }
+    const hasView = !!view;
 
     const originWindowId = shellWindowService.getWindowId(originWindow);
     if (!originWindowId) {
@@ -155,30 +152,55 @@ export class TabService {
 
     logger.debug('Creating new window with state', { newWindowId, position: { x: newState.x, y: newState.y } });
 
-    // Create window without auto-creating contentView for the active tab (we'll migrate the existing view)
-    const newWindow = shellWindowService.createWindow(newState, { skipActiveTabContent: true });
+    // Create window; skip active tab contentView only if we'll migrate an existing view
+    const newWindow = shellWindowService.createWindow(newState, { skipActiveTabContent: hasView });
 
-    // Migrate the view from origin to new window
-    try {
-      originWindow.contentView.removeChildView(view);
-      logger.debug('Removed view from origin window');
+    // Migrate the view from origin to new window (only if it exists)
+    if (hasView) {
+      try {
+        originWindow.contentView.removeChildView(view);
+        logger.debug('Removed view from origin window');
 
-      // Update view bounds for new window
-      const [newWidth, newHeight] = newWindow.getSize();
-      const bottomWidth = newWidth - bottomViewPadding * 2;
-      const bottomHeight = newHeight - topViewHeight - bottomViewPadding;
-      view.setBounds({
-        x: bottomViewPadding,
-        y: topViewHeight,
-        width: bottomWidth,
-        height: bottomHeight
-      });
+        // Update view bounds for new window
+        const [newWidth, newHeight] = newWindow.getSize();
+        const bottomWidth = newWidth - bottomViewPadding * 2;
+        const bottomHeight = newHeight - topViewHeight - bottomViewPadding;
+        view.setBounds({
+          x: bottomViewPadding,
+          y: topViewHeight,
+          width: bottomWidth,
+          height: bottomHeight
+        });
 
-      shellWindowService.bringViewToFront(newWindow, view);
-      logger.debug('Added view to new window and brought to front');
-    } catch (error) {
-      logger.error('Failed to migrate view: {error}', { error });
-      return null;
+        shellWindowService.bringViewToFront(newWindow, view);
+        logger.debug('Added view to new window and brought to front');
+
+        // Notify the migrated view of its new window state
+        eventEmitterService.emitTo(view.webContents.id, GLOBAL_EVENTS.WINDOW_STATE_UPDATE, {
+          windowState: newState
+        });
+        logger.debug('Emitted WINDOW_STATE_UPDATE to migrated view');
+
+        // Also re-emit on reload to handle page refresh
+        view.webContents.once('did-finish-load', () => {
+          if (!view.webContents.isDestroyed()) {
+            eventEmitterService.emitTo(view.webContents.id, GLOBAL_EVENTS.WINDOW_STATE_UPDATE, {
+              windowState: newState
+            });
+            logger.debug('Re-emitted WINDOW_STATE_UPDATE after view reload');
+          }
+        });
+      } catch (error) {
+        logger.error('Failed to migrate view: {error}', { error });
+        return null;
+      }
+    } else {
+      // No view to migrate; contentView was auto-created and loaded in createWindow
+      logger.debug('No existing view to migrate; new window created with fresh contentView');
+      const newView = getContentViewByTabId(newWindow, tabId);
+      if (newView) {
+        shellWindowService.bringViewToFront(newWindow, newView);
+      }
     }
 
     // Update origin window state (remove the detached tab)
@@ -209,22 +231,6 @@ export class TabService {
       });
       logger.debug('Emitted TAB_DETACHED event to origin titlebar');
     }
-
-    // Notify the migrated view of its new window state
-    eventEmitterService.emitTo(view.webContents.id, GLOBAL_EVENTS.WINDOW_STATE_UPDATE, {
-      windowState: newState
-    });
-    logger.debug('Emitted WINDOW_STATE_UPDATE to migrated view');
-
-    // Also re-emit on reload to handle page refresh
-    view.webContents.once('did-finish-load', () => {
-      if (!view.webContents.isDestroyed()) {
-        eventEmitterService.emitTo(view.webContents.id, GLOBAL_EVENTS.WINDOW_STATE_UPDATE, {
-          windowState: newState
-        });
-        logger.debug('Re-emitted WINDOW_STATE_UPDATE after view reload');
-      }
-    });
 
     // Show and focus new window
     if (!newWindow.isDestroyed()) {
