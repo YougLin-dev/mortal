@@ -11,6 +11,8 @@ export const GLOBAL_EVENTS = {
   TAB_CONTEXT_MENU_ACTION: 'tab-context-menu-action',
   TAB_DETACHED: 'tab-detached',
   TAB_ATTACHED: 'tab-attached',
+  TAB_DRAG_GHOST_HOVER: 'tab-drag-ghost-hover',
+  TAB_DRAG_GHOST_CLEAR: 'tab-drag-ghost-clear',
   WINDOW_STATE_UPDATE: 'window-state-update'
 } as const;
 
@@ -29,7 +31,11 @@ export interface GlobalEventDataMap {
   [GLOBAL_EVENTS.TAB_DETACHED]: { tabId: string; newWindowId: string };
 
   // tab attached
-  [GLOBAL_EVENTS.TAB_ATTACHED]: { tabId: string; tab: import('./window').Tab; originWindowId: string };
+  [GLOBAL_EVENTS.TAB_ATTACHED]: { tabId: string; tab: import('./window').Tab; originWindowId: string; toIndex?: number };
+
+  // tab drag ghost
+  [GLOBAL_EVENTS.TAB_DRAG_GHOST_HOVER]: { clientX: number; clientY: number; draggedWidth: number };
+  [GLOBAL_EVENTS.TAB_DRAG_GHOST_CLEAR]: Record<string, never>;
 
   // window state
   [GLOBAL_EVENTS.WINDOW_STATE_UPDATE]: { windowState: WindowState };

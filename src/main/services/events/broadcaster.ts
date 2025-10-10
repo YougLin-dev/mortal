@@ -1,6 +1,7 @@
-import { BaseWindow, WebContentsView } from 'electron';
+import { WebContentsView } from 'electron';
 import { UNIFIED_EVENT_CHANNEL, type GlobalEventDataMap } from '@/shared/types/event';
 import { getLoggerBy } from '@/shared/logging/helpers';
+import { getRealAppWindows } from '@/main/utils/window-utils';
 
 const logger = getLoggerBy('events', 'broadcaster');
 
@@ -11,7 +12,7 @@ export class EventEmitterService {
    * @param data Event data
    */
   emit<K extends keyof GlobalEventDataMap>(event: K, data: GlobalEventDataMap[K]): void {
-    const allWindows = BaseWindow.getAllWindows();
+    const allWindows = getRealAppWindows();
 
     allWindows.forEach((window) => {
       // Send to all views in the window
@@ -35,7 +36,7 @@ export class EventEmitterService {
    * @param excludeWebContentsId WebContents ID to exclude (typically the sender)
    */
   emitExcept<K extends keyof GlobalEventDataMap>(event: K, data: GlobalEventDataMap[K], excludeWebContentsId?: number): void {
-    const allWindows = BaseWindow.getAllWindows();
+    const allWindows = getRealAppWindows();
     let sentCount = 0;
 
     allWindows.forEach((window) => {
@@ -72,7 +73,7 @@ export class EventEmitterService {
    * @param data Event data
    */
   emitTo<K extends keyof GlobalEventDataMap>(webContentsId: number, event: K, data: GlobalEventDataMap[K]): void {
-    const allWindows = BaseWindow.getAllWindows();
+    const allWindows = getRealAppWindows();
 
     for (const window of allWindows) {
       for (const view of window.contentView.children) {

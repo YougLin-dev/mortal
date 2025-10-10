@@ -7,6 +7,7 @@ import type { Tab, WindowState } from '@/shared/types/window';
 import { toArgument } from '@/shared/utils/preload-utils';
 import { isDev } from '@/main/utils/dev';
 import { isMac } from '@/main/utils/platform';
+import { getRealAppWindows, isGhostWindow } from '@/main/utils/window-utils';
 import { BaseWindow, Menu, nativeTheme, WebContentsView, type IpcMainInvokeEvent, type WebContents } from 'electron';
 import * as path from 'node:path';
 import { WindowStateManager } from './window-state-manager';
@@ -214,7 +215,7 @@ export class ShellWindowService {
   }
 
   public findWindowAtPoint(screenX: number, screenY: number): { win: BaseWindow; windowId: string } | null {
-    const allWindows = BaseWindow.getAllWindows();
+    const allWindows = getRealAppWindows();
     for (const win of allWindows) {
       if (win.isDestroyed()) continue;
 
@@ -367,7 +368,7 @@ export class ShellWindowService {
 
       // Delete window state from storage if not the last window
       // (Last window's state is handled by window-all-closed event in main.ts)
-      const remainingWindows = BaseWindow.getAllWindows();
+      const remainingWindows = getRealAppWindows();
       if (windowId && remainingWindows.length > 0) {
         // Use async removeItem + immediate flush to ensure deletion
         storage
@@ -382,6 +383,16 @@ export class ShellWindowService {
           .catch((error) => {
             logger.error('Failed to delete window state: {error}', { error, windowId });
           });
+      }
+
+      // Clean up ghost windows if no real app windows remain
+      if (remainingWindows.length === 0) {
+        logger.info('Last real app window closed, destroying ghost windows');
+        BaseWindow.getAllWindows().forEach((w) => {
+          if (isGhostWindow(w) && !w.isDestroyed()) {
+            w.destroy();
+          }
+        });
       }
 
       logger.debug('Cleaned up window reference');

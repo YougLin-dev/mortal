@@ -20,6 +20,12 @@ declare global {
       showTabContextMenu: (params: { tabId: string; template: { action: string; label: string }[] }) => Promise<void>;
     };
 
+    ghostWindowService: {
+      start: (payload: { tabName: string }) => Promise<void>;
+      stop: () => Promise<void>;
+      updateInsertIndex: (target: { windowId: string; insertIndex: number }) => Promise<void>;
+    };
+
     tabService: {
       switchTab: (tabId: string, tabUrl: string) => Promise<void>;
       closeTab: (tabId: string) => Promise<void>;

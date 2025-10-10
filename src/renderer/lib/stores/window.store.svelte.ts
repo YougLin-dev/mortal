@@ -145,6 +145,13 @@ class WindowStore {
   // ============================================================================
 
   /**
+   * Get the window ID
+   */
+  get windowId(): string {
+    return this.state.windowId;
+  }
+
+  /**
    * Check if window is always on top
    */
   get isAlwaysOnTop(): boolean {

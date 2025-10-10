@@ -15,6 +15,9 @@
   import { Plus } from '@lucide/svelte';
   import { dndzone, TRIGGERS } from '$lib/dnd';
   import { cubicOut } from 'svelte/easing';
+  import { getLoggerBy } from '@/shared/logging/helpers';
+
+  const logger = getLoggerBy('component', 'tabbar');
 
   function slideExpand(node: Element, { duration = 300, easing = cubicOut } = {}) {
     const originalWidth = node.scrollWidth;
@@ -49,6 +52,20 @@
       windowStore.reorderTabs(newItems, info.id);
     } else if (info.trigger === TRIGGERS.DRAG_OUT) {
       isDraggingOut = true;
+
+      // Start ghost window with simple text indicator
+      if (info.id) {
+        const tab = windowStore.tabs.find((t) => t.id === info.id);
+        if (tab) {
+          window.ghostWindowService
+            .start({
+              tabName: tab.name
+            })
+            .catch((error) => {
+              logger.error('Failed to start ghost window: {error}', { error });
+            });
+        }
+      }
     } else {
       windowStore.reorderTabs(newItems, info.id);
     }
@@ -61,22 +78,30 @@
 
     // If dragged out of zone, use dropAtPointer to handle collision detection
     if (info.outOfZone && info.id && info.pointer) {
-      console.log('Tab dragged out, dropping at pointer:', info.id);
-      window.tabService
-        .dropAtPointer(info.id, { screenX: info.pointer.screenX, screenY: info.pointer.screenY })
+      logger.debug('Tab dragged out, dropping at pointer: {tabId}', { tabId: info.id });
+
+      const tabId = info.id;
+      const pointer = info.pointer;
+
+      // Stop ghost window first
+      window.ghostWindowService
+        .stop()
+        .then(() => {
+          return window.tabService.dropAtPointer(tabId, { screenX: pointer.screenX, screenY: pointer.screenY });
+        })
         .then((result) => {
           if (result) {
             if (result.action === 'merged') {
-              console.log('Tab successfully merged into window:', result.targetWindowId);
+              logger.info('Tab successfully merged into window: {windowId}', { windowId: result.targetWindowId });
             } else if (result.action === 'detached') {
-              console.log('Tab successfully detached to new window:', result.newWindowId);
+              logger.info('Tab successfully detached to new window: {windowId}', { windowId: result.newWindowId });
             }
           } else {
-            console.error('Failed to drop tab');
+            logger.error('Failed to drop tab');
           }
         })
         .catch((error) => {
-          console.error('Error dropping tab:', error);
+          logger.error('Error dropping tab: {error}', { error });
         });
       return; // Don't reorder if dropping
     }

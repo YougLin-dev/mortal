@@ -1,5 +1,5 @@
 import type { IpcMainInvokeEvent } from 'electron';
-import { nativeTheme, BaseWindow } from 'electron';
+import { nativeTheme } from 'electron';
 import { Handler, Service } from '@/shared/decorators';
 import { TITLE_BAR_OVERLAY, WIN } from '@/shared/consts/ui';
 import type { ThemeType } from '@/shared/types/theme';
@@ -7,6 +7,7 @@ import { STORAGES } from '@/shared/types/storage-key';
 import { storage } from '@/main/core/storage/config';
 import { getLoggerBy } from '@/shared/logging/helpers';
 import { getContentViews, getTitlebarView } from '@/shared/types/view';
+import { getRealAppWindows } from '@/main/utils/window-utils';
 
 const logger = getLoggerBy('service', 'theme');
 
@@ -27,7 +28,7 @@ export class ThemeService {
   @Handler
   setTheme(_event: IpcMainInvokeEvent, theme: ThemeType): void {
     nativeTheme.themeSource = theme;
-    const allWindows = BaseWindow.getAllWindows();
+    const allWindows = getRealAppWindows();
     const topViewbackgroundColor = nativeTheme.shouldUseDarkColors ? WIN.BACKGROUND_CORLOR.DARK : WIN.BACKGROUND_CORLOR.LIGHT;
     const bottomBackgroundColor = topViewbackgroundColor;
 

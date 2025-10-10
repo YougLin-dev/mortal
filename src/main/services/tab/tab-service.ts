@@ -11,6 +11,7 @@ import { getContentViewByTabId, getTitlebarView, getWindowByWebContents } from '
 import type { WindowState } from '@/shared/types/window';
 import { eventEmitterService } from '../events/broadcaster';
 import { shellWindowService } from '../window/shell-window-service';
+import { ghostWindowService } from '../window/ghost-window-service';
 
 const logger = getLoggerBy('service', 'tab-service');
 
@@ -118,6 +119,9 @@ export class TabService {
       return null;
     }
 
+    // Get insert target from ghost window service
+    const insertTarget = ghostWindowService.getCurrentInsertTarget();
+
     // Find target window at pointer position
     const targetWindowData = shellWindowService.findWindowAtPoint(pointer.screenX, pointer.screenY);
 
@@ -128,7 +132,8 @@ export class TabService {
       if (targetWindowId !== originWindowId && shellWindowService.isPointInTitlebar(targetWindow, pointer.screenX, pointer.screenY)) {
         logger.info('Merging tab {tabId} into window {targetWindowId}', { tabId, targetWindowId });
 
-        const result = await this.moveTabToExistingWindow(originWindow, targetWindow, tabId);
+        const toIndex = insertTarget?.windowId === targetWindowId ? insertTarget.insertIndex : undefined;
+        const result = await this.moveTabToExistingWindow(originWindow, targetWindow, tabId, { toIndex });
         if (result) {
           return { action: 'merged', targetWindowId };
         }
@@ -291,7 +296,7 @@ export class TabService {
     return { newWindowId };
   }
 
-  private async moveTabToExistingWindow(originWin: BaseWindow, targetWin: BaseWindow, tabId: string): Promise<boolean> {
+  private async moveTabToExistingWindow(originWin: BaseWindow, targetWin: BaseWindow, tabId: string, opts?: { toIndex?: number }): Promise<boolean> {
     logger.info('Moving tab {tabId} from origin to target window', { tabId });
 
     const originWindowId = shellWindowService.getWindowId(originWin);
@@ -333,7 +338,8 @@ export class TabService {
 
       // Add tab to target state (make it active)
       const newTargetTabs = targetState.tabs.map((t) => ({ ...t, isActive: false }));
-      newTargetTabs.push({ ...tab, isActive: true });
+      const insertIndex = opts?.toIndex !== undefined ? Math.min(opts.toIndex, newTargetTabs.length) : newTargetTabs.length;
+      newTargetTabs.splice(insertIndex, 0, { ...tab, isActive: true });
 
       // Migrate view if it exists
       if (view) {
@@ -401,7 +407,8 @@ export class TabService {
         eventEmitterService.emitTo(targetTitlebarView.webContents.id, GLOBAL_EVENTS.TAB_ATTACHED, {
           tabId,
           tab: { ...tab, isActive: true },
-          originWindowId
+          originWindowId,
+          toIndex: insertIndex
         });
         logger.debug('Emitted TAB_ATTACHED to target titlebar');
       }
@@ -411,7 +418,7 @@ export class TabService {
         targetWin.focus();
       }
 
-      logger.info('Successfully moved tab {tabId} to target window', { tabId });
+      logger.info('Successfully moved tab {tabId} to target window at index {index}', { tabId, index: insertIndex });
       return true;
     } catch (error) {
       logger.error('Failed to move tab: {error}', { error, tabId });
