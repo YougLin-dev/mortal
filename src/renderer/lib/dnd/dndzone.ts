@@ -26,6 +26,8 @@ export interface DndZoneOptions<T> {
   dragStartThreshold?: number;
   /**
    * Pixels of vertical overflow threshold for detecting out-of-zone drag.
+   * For horizontal orientation, also used to calculate horizontal threshold (xThreshold = yThreshold * 3).
+   * Horizontal overflow is only detected when pointer is at tab ends to avoid false positives.
    * If not provided, defaults to 12.
    */
   outOfZoneThreshold?: number;
@@ -430,10 +432,30 @@ export function dndzone<T>(element: HTMLElement, options: DndZoneOptions<T>) {
     lastScreenX = ev.screenX;
     lastScreenY = ev.screenY;
 
-    // Detect out-of-zone (vertical overflow for horizontal orientation)
+    // Determine new index based on pointer (needed for out-of-zone gating)
+    const targetIndex = computeTargetIndex(ev.clientX, ev.clientY);
+    if (targetIndex < 0 || fromIndex < 0) return;
+
+    // Detect out-of-zone with improved horizontal detection for side-by-side windows
     const wasOutOfZone = isOutOfZone;
     if (orientation === 'horizontal' && containerRect) {
-      isOutOfZone = ev.clientY < containerRect.top - outOfZoneThreshold || ev.clientY > containerRect.bottom + outOfZoneThreshold;
+      const yThreshold = outOfZoneThreshold;
+      // Larger horizontal threshold: scale based on outOfZoneThreshold and draggedWidth
+      // to avoid false positives during normal reordering
+      const xThreshold = Math.max(yThreshold * 3, Math.min(96, Math.round((draggedWidth || 0) * 0.4)) || 48);
+
+      // Check vertical overflow (existing behavior)
+      const yOverflow = ev.clientY < containerRect.top - yThreshold || ev.clientY > containerRect.bottom + yThreshold;
+
+      // Check horizontal overflow (new: enables side-by-side window drags)
+      const xOverflow = ev.clientX < containerRect.left - xThreshold || ev.clientX > containerRect.right + xThreshold;
+
+      // Only consider horizontal overflow if pointer is at one of the ends
+      // This prevents false positives while reordering within the same tabbar
+      const childrenLen = nonDraggedChildren().length;
+      const atEnds = targetIndex <= 0 || targetIndex >= childrenLen;
+
+      isOutOfZone = yOverflow || (xOverflow && atEnds);
     } else {
       isOutOfZone = false;
     }
@@ -453,10 +475,7 @@ export function dndzone<T>(element: HTMLElement, options: DndZoneOptions<T>) {
       element.dispatchEvent(new CustomEvent('consider', { detail }));
     }
 
-    // Determine new index based on pointer
-    const targetIndex = computeTargetIndex(ev.clientX, ev.clientY);
-    if (targetIndex < 0 || fromIndex < 0) return;
-
+    // Update placeholder and animate siblings
     if (lastTargetIndex !== targetIndex) {
       const prevRects = captureSiblingRects();
       ensurePlaceholderAt(targetIndex);

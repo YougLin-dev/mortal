@@ -119,8 +119,9 @@ export class TabService {
       return null;
     }
 
-    // Get insert target from ghost window service
-    const insertTarget = ghostWindowService.getCurrentInsertTarget();
+    // Get insert target from ghost window service (synchronous read before stop() clears it)
+    const insertTarget = ghostWindowService.getCurrentInsertTargetSync();
+    logger.debug('Using insert target: {target}', { target: insertTarget });
 
     // Find target window at pointer position
     const targetWindowData = shellWindowService.findWindowAtPoint(pointer.screenX, pointer.screenY);

@@ -365,11 +365,17 @@ window.events.on(GLOBAL_EVENTS.TAB_DETACHED, ({ tabId, newWindowId }) => {
   windowStore.removeTabLocally(tabId);
 });
 
-window.events.on(GLOBAL_EVENTS.TAB_ATTACHED, ({ tabId, tab, originWindowId }) => {
-  logger.info('Tab attached event received', { tabId, originWindowId });
+window.events.on(GLOBAL_EVENTS.TAB_ATTACHED, ({ tabId, tab, originWindowId, toIndex }) => {
+  logger.info('Tab attached event received', { tabId, originWindowId, toIndex });
 
-  // Deactivate all existing tabs and add the new tab as active
-  windowStore.tabs = windowStore.tabs.map((t) => ({ ...t, isActive: false })).concat(tab);
+  // Deactivate all existing tabs
+  const deactivated = windowStore.tabs.map((t) => ({ ...t, isActive: false }));
+
+  // Insert at the specified index (with bounds checking)
+  const insertAt = Math.max(0, Math.min(toIndex ?? deactivated.length, deactivated.length));
+  const next = [...deactivated];
+  next.splice(insertAt, 0, tab);
+  windowStore.tabs = next;
 
   // Switch to the new tab
   window.tabService.switchTab(tab.id, tab.url).catch((error) => {

@@ -75,23 +75,27 @@
     const { info, items: newItems } = e.detail;
     isDragging = false;
 
-    // If ghost window was started, always stop it first
+    // If ghost window was started, handle it
     if (isDraggingOut) {
       isDraggingOut = false;
 
       // If dragged out of zone, use dropAtPointer to handle collision detection
       if (info.outOfZone && info.id && info.pointer) {
+        // Only the source window (window that owns the dragged tab) should handle the drop
+        const tabBelongsToThisWindow = windowStore.tabs.some((t) => t.id === info.id);
+        if (!tabBelongsToThisWindow) {
+          logger.debug('Tab {tabId} does not belong to this window, skipping drop', { tabId: info.id });
+          return;
+        }
+
         logger.debug('Tab dragged out, dropping at pointer: {tabId}', { tabId: info.id });
 
         const tabId = info.id;
         const pointer = info.pointer;
 
-        // Stop ghost window first
-        window.ghostWindowService
-          .stop()
-          .then(() => {
-            return window.tabService.dropAtPointer(tabId, { screenX: pointer.screenX, screenY: pointer.screenY });
-          })
+        // Drop first (backend reads insertTarget synchronously), then stop ghost
+        window.tabService
+          .dropAtPointer(tabId, { screenX: pointer.screenX, screenY: pointer.screenY })
           .then((result) => {
             if (result) {
               if (result.action === 'merged') {
@@ -105,6 +109,12 @@
           })
           .catch((error) => {
             logger.error('Error dropping tab: {error}', { error });
+          })
+          .finally(() => {
+            // Always stop ghost window after drop attempt
+            window.ghostWindowService.stop().catch((error) => {
+              logger.error('Failed to stop ghost window: {error}', { error });
+            });
           });
         return; // Don't reorder if dropping
       } else {

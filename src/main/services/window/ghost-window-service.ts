@@ -194,7 +194,11 @@ export class GhostWindowService {
     });
   }
 
-  getCurrentInsertTarget(): InsertTarget | null {
+  /**
+   * Internal synchronous method for backend services.
+   * Called by dropAtPointer before stop() clears the target.
+   */
+  getCurrentInsertTargetSync(): InsertTarget | null {
     return this.currentInsertTarget;
   }
 
