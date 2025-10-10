@@ -43,6 +43,7 @@ The app uses a **BaseWindow + WebContentsView architecture** instead of traditio
 - **View Tagging System**: Tracks views across windows with `__viewType` and `__tabId` tags
 - **Independent Views**: Each tab gets its own WebContentsView, enabling isolated rendering
 - **Multi-Protocol Support**: Separate protocols for titlebar (`titlebar://`), content (`content://`), and loading (`loading://`)
+- **Detachable Tabs**: Tabs can be dragged out of the tab bar to create a new ShellWindow; the detached tab becomes the active content view in the new window
 
 **Key files:**
 
@@ -66,7 +67,7 @@ BaseWindow (shell container)
 - Shared titlebar across all tabs
 - Smooth tab switching with loading states
 - Better memory management per tab
-- Enables future multi-window scenarios
+- Supports multi-window operation via tab detachment (drag a tab out to spawn a new window)
 
 #### 2. HTTP-Style IPC Router System
 
@@ -172,8 +173,8 @@ export class ExampleService {
 
 - `window.systemService` - System operations, logging, notifications
 - `window.themeService` - Theme management
-- `window.shellWindowService` - Window controls (always-on-top, tab context menu)
-- `window.tabService` - Tab switching and lifecycle management
+- `window.shellWindowService` - Window controls (always-on-top, tab context menu, new window creation for detached tabs)
+- `window.tabService` - Tab switching, lifecycle management, and tab detachment
 - `window.storageService` - Key-value storage operations
 - `window.eventEmitterService` - Event broadcasting
 
@@ -265,6 +266,8 @@ logger.error('Error occurred: {error}', { error });
 - **State injection**: Window state passed via preload arguments (`windowState` global)
 - **Auto-save**: Window states saved on `window-all-closed` event
 - Supports multiple window instances with individual state tracking
+- **Per-window tab lists**: Each window persists its own tab state
+- **Tab detachment persistence**: Detached tabs are persisted in the new window's state
 
 #### 8. Storage System
 
@@ -272,6 +275,7 @@ logger.error('Error occurred: {error}', { error });
 - **Migration support**: Automatic schema migrations via `storage.migrate()`
 - **Version tracking**: Current version defined in storage config
 - **Location**: Dev mode uses `data/storage/`, production uses `userData/storage`
+- **Theme storage path**: Theme settings are stored under the `app/theme` subdirectory
 - **Queue driver**: Batches writes for performance (3 items, 1s flush interval)
 - **Migration hooks**: `afterMigration`, `onMigrationError` callbacks
 - Used for app settings, window states, and user data
@@ -315,6 +319,7 @@ Storage is initialized in `src/main/core/storage/config.ts` with migration hooks
   - Tab state stored in window state
   - Each tab has id, name, active status, pinned status, and URL
   - Tab reordering via drag-and-drop
+  - Tab detachment: Drag a tab outside the tab bar to create a new window; the new window opens with the detached tab active and persisted
   - Always maintains at least one tab (auto-creates new tab when last tab is closed)
   - Tab close button always visible for flexibility
 
