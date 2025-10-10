@@ -74,36 +74,45 @@
   function handleDndFinalize(e: CustomEvent<TabDndEvent>) {
     const { info, items: newItems } = e.detail;
     isDragging = false;
-    isDraggingOut = false;
 
-    // If dragged out of zone, use dropAtPointer to handle collision detection
-    if (info.outOfZone && info.id && info.pointer) {
-      logger.debug('Tab dragged out, dropping at pointer: {tabId}', { tabId: info.id });
+    // If ghost window was started, always stop it first
+    if (isDraggingOut) {
+      isDraggingOut = false;
 
-      const tabId = info.id;
-      const pointer = info.pointer;
+      // If dragged out of zone, use dropAtPointer to handle collision detection
+      if (info.outOfZone && info.id && info.pointer) {
+        logger.debug('Tab dragged out, dropping at pointer: {tabId}', { tabId: info.id });
 
-      // Stop ghost window first
-      window.ghostWindowService
-        .stop()
-        .then(() => {
-          return window.tabService.dropAtPointer(tabId, { screenX: pointer.screenX, screenY: pointer.screenY });
-        })
-        .then((result) => {
-          if (result) {
-            if (result.action === 'merged') {
-              logger.info('Tab successfully merged into window: {windowId}', { windowId: result.targetWindowId });
-            } else if (result.action === 'detached') {
-              logger.info('Tab successfully detached to new window: {windowId}', { windowId: result.newWindowId });
+        const tabId = info.id;
+        const pointer = info.pointer;
+
+        // Stop ghost window first
+        window.ghostWindowService
+          .stop()
+          .then(() => {
+            return window.tabService.dropAtPointer(tabId, { screenX: pointer.screenX, screenY: pointer.screenY });
+          })
+          .then((result) => {
+            if (result) {
+              if (result.action === 'merged') {
+                logger.info('Tab successfully merged into window: {windowId}', { windowId: result.targetWindowId });
+              } else if (result.action === 'detached') {
+                logger.info('Tab successfully detached to new window: {windowId}', { windowId: result.newWindowId });
+              }
+            } else {
+              logger.error('Failed to drop tab');
             }
-          } else {
-            logger.error('Failed to drop tab');
-          }
-        })
-        .catch((error) => {
-          logger.error('Error dropping tab: {error}', { error });
+          })
+          .catch((error) => {
+            logger.error('Error dropping tab: {error}', { error });
+          });
+        return; // Don't reorder if dropping
+      } else {
+        // Dragged out but returned to zone - just stop ghost window and reorder
+        window.ghostWindowService.stop().catch((error) => {
+          logger.error('Failed to stop ghost window: {error}', { error });
         });
-      return; // Don't reorder if dropping
+      }
     }
 
     // Normal reorder
