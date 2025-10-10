@@ -24,6 +24,10 @@ declare global {
       switchTab: (tabId: string, tabUrl: string) => Promise<void>;
       closeTab: (tabId: string) => Promise<void>;
       detachToNewWindow: (tabId: string, pointer?: { screenX: number; screenY: number }) => Promise<{ newWindowId: string } | null>;
+      dropAtPointer: (
+        tabId: string,
+        pointer: { screenX: number; screenY: number }
+      ) => Promise<{ action: 'merged'; targetWindowId: string } | { action: 'detached'; newWindowId: string } | null>;
     };
 
     storageService: {

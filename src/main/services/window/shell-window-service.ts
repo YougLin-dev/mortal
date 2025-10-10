@@ -204,6 +204,39 @@ export class ShellWindowService {
     return this.windows.get(window)?.windowId;
   }
 
+  public getWindowById(windowId: string): BaseWindow | undefined {
+    for (const [win, data] of this.windows.entries()) {
+      if (data.windowId === windowId) {
+        return win;
+      }
+    }
+    return undefined;
+  }
+
+  public findWindowAtPoint(screenX: number, screenY: number): { win: BaseWindow; windowId: string } | null {
+    const allWindows = BaseWindow.getAllWindows();
+    for (const win of allWindows) {
+      if (win.isDestroyed()) continue;
+
+      const bounds = win.getBounds();
+      if (screenX >= bounds.x && screenX <= bounds.x + bounds.width && screenY >= bounds.y && screenY <= bounds.y + bounds.height) {
+        const windowId = this.getWindowId(win);
+        if (windowId) {
+          return { win, windowId };
+        }
+      }
+    }
+    return null;
+  }
+
+  public isPointInTitlebar(win: BaseWindow, x: number, y: number): boolean {
+    const bounds = win.getBounds();
+    const relativeX = x - bounds.x;
+    const relativeY = y - bounds.y;
+
+    return relativeX >= 0 && relativeX <= bounds.width && relativeY >= 0 && relativeY <= topViewHeight;
+  }
+
   /// private
   #buildWindowByWindowState(windowStateManager: WindowStateManager, opts?: { skipActiveTabContent?: boolean }) {
     const { shouldUseDarkColors } = nativeTheme;

@@ -10,6 +10,7 @@ export const GLOBAL_EVENTS = {
   STORAGE_PREFIX: 'storage:*',
   TAB_CONTEXT_MENU_ACTION: 'tab-context-menu-action',
   TAB_DETACHED: 'tab-detached',
+  TAB_ATTACHED: 'tab-attached',
   WINDOW_STATE_UPDATE: 'window-state-update'
 } as const;
 
@@ -26,6 +27,9 @@ export interface GlobalEventDataMap {
 
   // tab detached
   [GLOBAL_EVENTS.TAB_DETACHED]: { tabId: string; newWindowId: string };
+
+  // tab attached
+  [GLOBAL_EVENTS.TAB_ATTACHED]: { tabId: string; tab: import('./window').Tab; originWindowId: string };
 
   // window state
   [GLOBAL_EVENTS.WINDOW_STATE_UPDATE]: { windowState: WindowState };

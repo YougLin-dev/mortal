@@ -59,22 +59,26 @@
     isDragging = false;
     isDraggingOut = false;
 
-    // If dragged out of zone, detach to new window
+    // If dragged out of zone, use dropAtPointer to handle collision detection
     if (info.outOfZone && info.id && info.pointer) {
-      console.log('Tab dragged out, detaching to new window:', info.id);
+      console.log('Tab dragged out, dropping at pointer:', info.id);
       window.tabService
-        .detachToNewWindow(info.id, { screenX: info.pointer.screenX, screenY: info.pointer.screenY })
+        .dropAtPointer(info.id, { screenX: info.pointer.screenX, screenY: info.pointer.screenY })
         .then((result) => {
           if (result) {
-            console.log('Tab successfully detached to new window:', result.newWindowId);
+            if (result.action === 'merged') {
+              console.log('Tab successfully merged into window:', result.targetWindowId);
+            } else if (result.action === 'detached') {
+              console.log('Tab successfully detached to new window:', result.newWindowId);
+            }
           } else {
-            console.error('Failed to detach tab to new window');
+            console.error('Failed to drop tab');
           }
         })
         .catch((error) => {
-          console.error('Error detaching tab:', error);
+          console.error('Error dropping tab:', error);
         });
-      return; // Don't reorder if detaching
+      return; // Don't reorder if dropping
     }
 
     // Normal reorder

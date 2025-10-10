@@ -1,4 +1,4 @@
-import type { IpcMainInvokeEvent } from 'electron';
+import { BaseWindow, type IpcMainInvokeEvent } from 'electron';
 import { nanoid } from 'nanoid';
 
 import { Handler, Service } from '@/shared/decorators';
@@ -96,6 +96,54 @@ export class TabService {
     }
 
     shellWindowService.destroyContentView(window, contentView);
+  }
+
+  @Handler
+  async dropAtPointer(
+    event: IpcMainInvokeEvent,
+    tabId: string,
+    pointer: { screenX: number; screenY: number }
+  ): Promise<{ action: 'merged'; targetWindowId: string } | { action: 'detached'; newWindowId: string } | null> {
+    logger.info('Dropping tab {tabId} at pointer ({x}, {y})', { tabId, x: pointer.screenX, y: pointer.screenY });
+
+    const originWindow = getWindowByWebContents(event.sender);
+    if (!originWindow) {
+      logger.error('Origin window not found for webContents {id}', { id: event.sender.id });
+      return null;
+    }
+
+    const originWindowId = shellWindowService.getWindowId(originWindow);
+    if (!originWindowId) {
+      logger.error('Origin windowId not found');
+      return null;
+    }
+
+    // Find target window at pointer position
+    const targetWindowData = shellWindowService.findWindowAtPoint(pointer.screenX, pointer.screenY);
+
+    if (targetWindowData) {
+      const { win: targetWindow, windowId: targetWindowId } = targetWindowData;
+
+      // Check if pointer is in titlebar area and not the same window
+      if (targetWindowId !== originWindowId && shellWindowService.isPointInTitlebar(targetWindow, pointer.screenX, pointer.screenY)) {
+        logger.info('Merging tab {tabId} into window {targetWindowId}', { tabId, targetWindowId });
+
+        const result = await this.moveTabToExistingWindow(originWindow, targetWindow, tabId);
+        if (result) {
+          return { action: 'merged', targetWindowId };
+        }
+        logger.error('Failed to merge tab into existing window');
+        return null;
+      }
+    }
+
+    // Fall back to creating new window
+    logger.info('No valid drop target found, creating new window');
+    const detachResult = await this.detachToNewWindow(event, tabId, pointer);
+    if (detachResult) {
+      return { action: 'detached', newWindowId: detachResult.newWindowId };
+    }
+    return null;
   }
 
   @Handler
@@ -241,6 +289,134 @@ export class TabService {
     logger.info('Successfully detached tab {tabId} to new window {newWindowId}', { tabId, newWindowId });
 
     return { newWindowId };
+  }
+
+  private async moveTabToExistingWindow(originWin: BaseWindow, targetWin: BaseWindow, tabId: string): Promise<boolean> {
+    logger.info('Moving tab {tabId} from origin to target window', { tabId });
+
+    const originWindowId = shellWindowService.getWindowId(originWin);
+    const targetWindowId = shellWindowService.getWindowId(targetWin);
+
+    if (!originWindowId || !targetWindowId) {
+      logger.error('Failed to get window IDs');
+      return false;
+    }
+
+    const originState = storage.getSync(STORAGES.APP_WINDOWS(originWindowId));
+    const targetState = storage.getSync(STORAGES.APP_WINDOWS(targetWindowId));
+
+    if (!originState || !targetState) {
+      logger.error('Failed to get window states');
+      return false;
+    }
+
+    const tab = originState.tabs.find((t) => t.id === tabId);
+    if (!tab) {
+      logger.error('Tab not found in origin state: {tabId}', { tabId });
+      return false;
+    }
+
+    const view = getContentViewByTabId(originWin, tabId);
+
+    try {
+      // Remove tab from origin state
+      const removedIndex = originState.tabs.findIndex((t) => t.id === tabId);
+      const wasActive = originState.tabs[removedIndex]?.isActive;
+      const newOriginTabs = originState.tabs.filter((t) => t.id !== tabId);
+
+      if (wasActive && newOriginTabs.length > 0) {
+        const newActiveIndex = Math.min(removedIndex, newOriginTabs.length - 1);
+        newOriginTabs.forEach((t, i) => {
+          t.isActive = i === newActiveIndex;
+        });
+      }
+
+      // Add tab to target state (make it active)
+      const newTargetTabs = targetState.tabs.map((t) => ({ ...t, isActive: false }));
+      newTargetTabs.push({ ...tab, isActive: true });
+
+      // Migrate view if it exists
+      if (view) {
+        originWin.contentView.removeChildView(view);
+        logger.debug('Removed view from origin window');
+
+        // Update view bounds for target window
+        const [targetWidth, targetHeight] = targetWin.getSize();
+        const bottomWidth = targetWidth - bottomViewPadding * 2;
+        const bottomHeight = targetHeight - topViewHeight - bottomViewPadding;
+        view.setBounds({
+          x: bottomViewPadding,
+          y: topViewHeight,
+          width: bottomWidth,
+          height: bottomHeight
+        });
+
+        shellWindowService.bringViewToFront(targetWin, view);
+        logger.debug('Added view to target window and brought to front');
+
+        // Notify the migrated view of its new window state
+        const updatedTargetState = { ...targetState, tabs: newTargetTabs };
+        eventEmitterService.emitTo(view.webContents.id, GLOBAL_EVENTS.WINDOW_STATE_UPDATE, {
+          windowState: updatedTargetState
+        });
+        logger.debug('Emitted WINDOW_STATE_UPDATE to migrated view');
+
+        // Re-emit on reload to handle page refresh
+        view.webContents.once('did-finish-load', () => {
+          if (!view.webContents.isDestroyed()) {
+            eventEmitterService.emitTo(view.webContents.id, GLOBAL_EVENTS.WINDOW_STATE_UPDATE, {
+              windowState: updatedTargetState
+            });
+            logger.debug('Re-emitted WINDOW_STATE_UPDATE after view reload');
+          }
+        });
+      }
+
+      // Update storage for both windows
+      storage.setSync(STORAGES.APP_WINDOWS(originWindowId), {
+        ...originState,
+        tabs: newOriginTabs
+      });
+
+      storage.setSync(STORAGES.APP_WINDOWS(targetWindowId), {
+        ...targetState,
+        tabs: newTargetTabs
+      });
+
+      logger.debug('Updated window states in storage');
+
+      // Notify origin window's titlebar
+      const originTitlebarView = getTitlebarView(originWin);
+      if (originTitlebarView) {
+        eventEmitterService.emitTo(originTitlebarView.webContents.id, GLOBAL_EVENTS.TAB_DETACHED, {
+          tabId,
+          newWindowId: targetWindowId
+        });
+        logger.debug('Emitted TAB_DETACHED to origin titlebar');
+      }
+
+      // Notify target window's titlebar
+      const targetTitlebarView = getTitlebarView(targetWin);
+      if (targetTitlebarView) {
+        eventEmitterService.emitTo(targetTitlebarView.webContents.id, GLOBAL_EVENTS.TAB_ATTACHED, {
+          tabId,
+          tab: { ...tab, isActive: true },
+          originWindowId
+        });
+        logger.debug('Emitted TAB_ATTACHED to target titlebar');
+      }
+
+      // Focus target window
+      if (!targetWin.isDestroyed()) {
+        targetWin.focus();
+      }
+
+      logger.info('Successfully moved tab {tabId} to target window', { tabId });
+      return true;
+    } catch (error) {
+      logger.error('Failed to move tab: {error}', { error, tabId });
+      return false;
+    }
   }
 }
 

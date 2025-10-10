@@ -357,3 +357,15 @@ window.events.on(GLOBAL_EVENTS.TAB_DETACHED, ({ tabId, newWindowId }) => {
   logger.info('Tab detached event received', { tabId, newWindowId });
   windowStore.removeTabLocally(tabId);
 });
+
+window.events.on(GLOBAL_EVENTS.TAB_ATTACHED, ({ tabId, tab, originWindowId }) => {
+  logger.info('Tab attached event received', { tabId, originWindowId });
+
+  // Deactivate all existing tabs and add the new tab as active
+  windowStore.tabs = windowStore.tabs.map((t) => ({ ...t, isActive: false })).concat(tab);
+
+  // Switch to the new tab
+  window.tabService.switchTab(tab.id, tab.url).catch((error) => {
+    logger.error('Failed to switch to attached tab', { error, tabId });
+  });
+});
