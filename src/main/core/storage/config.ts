@@ -14,6 +14,7 @@ const logger = getLoggerBy('storage', 'migration');
 
 const devStoragePath = join(cwd(), 'data/storage');
 const storagePath = isDev ? devStoragePath : join(app.getPath('userData'), 'storage');
+const themePath = join(storagePath, 'app', 'theme');
 
 export const storage = createStorage<APPStorage>({
   driver: queueDriver({
@@ -79,6 +80,6 @@ export const storage = createStorage<APPStorage>({
 storage.mount(
   'app:theme',
   fsDriver({
-    base: storagePath
+    base: themePath
   })
 );
