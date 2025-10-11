@@ -52,10 +52,10 @@ declare global {
       setItems: (items: StorageItem[]) => Promise<void>;
     };
 
-    _ipcFetchRaw: (url: string, init?: RequestInit) => Promise<IpcResponse>;
+    _ipcFetchRaw: (input: RequestInfo | URL, init?: RequestInit) => Promise<IpcResponse>;
     _createStreamController: (streamId: string) => StreamController;
     _abortIpcRequest: (requestId: string) => void;
-    ipcFetch: (url: string, init?: RequestInit) => Promise<Response>;
+    ipcFetch: (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
     electron: ElectronAPI;
     events: Emitter<GlobalEventDataMap>;
     windowState: WindowState | null;

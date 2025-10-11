@@ -21,6 +21,7 @@ import {
   FETCH_ABORT_CHANNEL
 } from '@/shared/types/fetch';
 import { getPreloadFetchLogger } from '@/shared/logging/helpers';
+import { parseFetchInput } from '@/shared/utils/fetch-utils';
 
 const baseLogger = getPreloadFetchLogger();
 
@@ -30,20 +31,22 @@ function generateRequestId(): string {
   return `req-${Date.now()}-${++requestId}`;
 }
 
-export function ipcFetch(url: string, init?: RequestInit): Promise<IpcResponse> {
-  baseLogger.info('ipcFetch called {method} {url}', { method: init?.method || 'GET', url });
+export function ipcFetch(input: RequestInfo | URL, init?: RequestInit): Promise<IpcResponse> {
+  const { url, init: mergedInit } = parseFetchInput(input, init);
+
+  baseLogger.info('ipcFetch called {method} {url}', { method: mergedInit?.method || 'GET', url });
   return new Promise((resolve) => {
     const id = generateRequestId();
     const logger = getPreloadFetchLogger({ id });
     logger.debug('Generated request ID {id}');
-    logger.debug('ipcFetch init {method} {url}', { method: init?.method || 'GET', url });
+    logger.debug('ipcFetch init {method} {url}', { method: mergedInit?.method || 'GET', url });
 
     const request: IpcRequest = {
       id,
-      method: (init?.method?.toUpperCase() || 'GET') as HTTPMethod,
+      method: (mergedInit?.method?.toUpperCase() || 'GET') as HTTPMethod,
       url,
-      headers: headersToObject(init?.headers),
-      body: init?.body as SerializedBody | undefined
+      headers: headersToObject(mergedInit?.headers),
+      body: mergedInit?.body as SerializedBody | undefined
     };
 
     const responseHandler = (_event: IpcRendererEvent, response: IpcResponseData) => {

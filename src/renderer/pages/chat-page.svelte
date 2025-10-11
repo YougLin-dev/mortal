@@ -4,7 +4,6 @@
 
   let input = '';
   const chat = new Chat({
-    // @ts-expect-error no-error
     transport: new DefaultChatTransport({ api: '/api/chat', fetch: window.ipcFetch })
   });
 

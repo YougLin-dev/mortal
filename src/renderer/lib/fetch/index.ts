@@ -1,6 +1,7 @@
 import type { IpcResponse, JsonValue, SerializedBody } from '@/shared/types/router';
 
 import { getRendererFetchLogger } from '@/shared/logging/helpers';
+import { parseFetchInput } from '@/shared/utils/fetch-utils';
 
 function isJsonValue(value: unknown): value is JsonValue {
   if (value === null) return true;
@@ -79,19 +80,21 @@ function prepareBody(serializedBody: SerializedBody): string | undefined {
   return JSON.stringify(serializedBody);
 }
 
-export async function ipcFetch(url: string, init?: RequestInit): Promise<Response> {
+export async function ipcFetch(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
+  const { url, init: mergedInit } = parseFetchInput(input, init);
+
   const logger = getRendererFetchLogger();
-  logger.info('START {method} {url}', { method: init?.method || 'GET', url });
-  logger.debug('Init {init}', { init });
+  logger.info('START {method} {url}', { method: mergedInit?.method || 'GET', url });
+  logger.debug('Init {init}', { init: mergedInit });
 
   try {
-    const serializedBody = ensureSerializableBody(init?.body);
-    const headers = ensureHeaders(init, serializedBody);
+    const serializedBody = ensureSerializableBody(mergedInit?.body);
+    const headers = ensureHeaders(mergedInit, serializedBody);
     const bodyPayload = prepareBody(serializedBody);
 
     logger.debug('Calling window._ipcFetchRaw');
     const rawResponse: IpcResponse = await window._ipcFetchRaw(url, {
-      ...init,
+      ...mergedInit,
       headers,
       body: bodyPayload
     });
@@ -102,7 +105,7 @@ export async function ipcFetch(url: string, init?: RequestInit): Promise<Respons
       rawResponse
     });
 
-    const abortSignal = init?.signal ?? undefined;
+    const abortSignal = mergedInit?.signal ?? undefined;
 
     return processResponse(rawResponse, abortSignal);
   } catch (error) {
