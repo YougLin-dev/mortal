@@ -1,4 +1,4 @@
-import { BrowserWindow, nativeTheme, screen, type IpcMainInvokeEvent } from 'electron';
+import { BaseWindow, WebContentsView, nativeTheme, screen, type IpcMainInvokeEvent } from 'electron';
 
 import { Handler, Service } from '@/shared/decorators';
 import { getLoggerBy } from '@/shared/logging/helpers';
@@ -23,17 +23,18 @@ interface InsertTarget {
 
 @Service
 export class GhostWindowService {
-  private ghostWindow: BrowserWindow | null = null;
+  private ghostWindow: BaseWindow | null = null;
+  private ghostView: WebContentsView | null = null;
   private updateInterval: NodeJS.Timeout | null = null;
   private lastPointerPosition: { x: number; y: number } | null = null;
   private currentHoveredWindowId: string | null = null;
   private currentInsertTarget: InsertTarget | null = null;
   private draggedWidth: number = 0;
 
-  private createGhostWindow(): BrowserWindow {
+  private createGhostWindow(): BaseWindow {
     logger.debug('Creating ghost window');
 
-    const win = new BrowserWindow({
+    const win = new BaseWindow({
       width: 120,
       height: 32,
       frame: false,
@@ -45,13 +46,23 @@ export class GhostWindowService {
       minimizable: false,
       maximizable: false,
       backgroundColor: '#00000000',
-      show: false,
-      useContentSize: true,
+      show: false
+    });
+
+    // Create WebContentsView for the ghost window
+    const view = new WebContentsView({
       webPreferences: {
         nodeIntegration: false,
         contextIsolation: true
       }
     });
+
+    view.setBounds({ x: 0, y: 0, width: 120, height: 32 });
+    view.setBackgroundColor('#00000000');
+    win.contentView.addChildView(view);
+
+    // Store view reference
+    this.ghostView = view;
 
     // Mark as ghost window using type-safe WeakSet
     markGhostWindow(win);
@@ -63,7 +74,7 @@ export class GhostWindowService {
     return win;
   }
 
-  private ensureGhostWindow(): BrowserWindow {
+  private ensureGhostWindow(): BaseWindow {
     if (!this.ghostWindow || this.ghostWindow.isDestroyed()) {
       this.ghostWindow = this.createGhostWindow();
     }
@@ -132,7 +143,7 @@ export class GhostWindowService {
         </html>
       `;
 
-      await ghost.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(html)}`);
+      await this.ghostView!.webContents.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(html)}`);
 
       // Get current cursor position
       const cursorPos = screen.getCursorScreenPoint();
