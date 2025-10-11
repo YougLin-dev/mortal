@@ -1,3 +1,5 @@
+import './env';
+
 import './services';
 
 import { app } from 'electron';
