@@ -10,20 +10,40 @@ const logger = getLoggerBy('storage', 'service');
 
 @Service
 export class StorageService {
-  private watches = new Map<string, () => void>();
+  private globalWatcher?: () => void;
+  private subscribers = new Set<string>();
   private senderQueues = new Map<string, number[]>();
+
+  constructor() {
+    this.initGlobalWatcher();
+  }
+
+  private async initGlobalWatcher(): Promise<void> {
+    this.globalWatcher = await storage.watch(async (_event, key) => {
+      if (!this.subscribers.has(key)) return;
+
+      const newValue = await storage.getItem(key);
+      const queue = this.senderQueues.get(key);
+      const senderId = queue?.pop();
+
+      if (queue) {
+        this.senderQueues.delete(key);
+      }
+
+      logger.debug('Storage changed for key {key}, using last sender {senderId} (queue cleared)', {
+        key,
+        senderId: senderId ?? 'none (main process update)'
+      });
+
+      eventEmitterService.emitExcept(`storage:${key}`, { key, value: newValue }, senderId);
+    });
+  }
 
   @Handler
   async setItem(event: IpcMainInvokeEvent, key: string, value: StorageValue): Promise<void> {
     const queue = this.senderQueues.get(key) || [];
     queue.push(event.sender.id);
     this.senderQueues.set(key, queue);
-
-    logger.debug('Enqueued sender {senderId} for key {key} (queue length: {length})', {
-      senderId: event.sender.id,
-      key,
-      length: queue.length
-    });
 
     await storage.setItem(key, value);
   }
@@ -85,11 +105,6 @@ export class StorageService {
       this.senderQueues.set(item.key, queue);
     });
 
-    logger.debug('Enqueued sender {senderId} for {count} keys', {
-      senderId: event.sender.id,
-      count: items.length
-    });
-
     const formattedItems = items.map((item) => ({
       key: item.key,
       value: item.value,
@@ -99,46 +114,20 @@ export class StorageService {
   }
 
   @Handler
-  async watch<T extends StorageValue>(_event: IpcMainInvokeEvent, watchKey: string): Promise<void> {
-    if (this.watches.has(watchKey)) return;
-
-    const unwatch = await storage.watch(async (_event, key) => {
-      if (key === watchKey) {
-        const newValue = await storage.getItem<T>(watchKey);
-
-        const queue = this.senderQueues.get(watchKey);
-
-        // Take the LAST sender (most recent update that survived queue merging)
-        const senderId = queue?.pop();
-
-        // Clear the entire queue to prevent accumulation
-        if (queue) {
-          this.senderQueues.delete(watchKey);
-        }
-
-        logger.debug('Storage changed for key {key}, using last sender {senderId} (queue cleared)', {
-          key: watchKey,
-          senderId: senderId ?? 'none (main process update)'
-        });
-
-        // Broadcast to all windows except the final sender
-        eventEmitterService.emitExcept(`storage:${watchKey}`, { key, value: newValue }, senderId);
-      }
-    });
-
-    this.watches.set(watchKey, unwatch);
+  async watch(_event: IpcMainInvokeEvent, watchKey: string): Promise<void> {
+    this.subscribers.add(watchKey);
   }
 
   @Handler
   async unwatch(_event: IpcMainInvokeEvent, watchKey: string): Promise<void> {
-    const unwatch = this.watches.get(watchKey);
-    if (unwatch) {
-      unwatch();
-      this.watches.delete(watchKey);
-    }
+    this.subscribers.delete(watchKey);
   }
 
   async dispose(): Promise<void> {
+    if (this.globalWatcher) {
+      this.globalWatcher();
+    }
+    this.subscribers.clear();
     await storage.dispose();
   }
 }
