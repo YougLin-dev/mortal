@@ -43,3 +43,5 @@ export interface GlobalEventDataMap {
   [key: string]: unknown;
   [key: symbol]: unknown;
 }
+
+export type EventKey = keyof GlobalEventDataMap;
