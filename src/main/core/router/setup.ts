@@ -1,6 +1,6 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { ipcMain, type IpcMainEvent } from 'electron';
 import { getRoutes, getServiceName } from '@/shared/decorators';
+import { headersToObject } from '@/shared/utils/fetch-utils';
 import { services } from '@/main/services';
 import type {
   IpcRequest,
@@ -8,6 +8,7 @@ import type {
   IpcStreamChunk,
   IpcStreamEnd,
   IpcStreamError,
+  IpcStreamReady,
   IpcAbortRequest,
   SerializedBody,
   JsonValue
@@ -18,22 +19,27 @@ import {
   FETCH_STREAM_DATA_CHANNEL,
   FETCH_STREAM_END_CHANNEL,
   FETCH_STREAM_ERROR_CHANNEL,
+  FETCH_STREAM_READY_CHANNEL,
   FETCH_ABORT_CHANNEL
 } from '@/shared/types/fetch';
 import { getIpcRouterLogger } from '@/shared/logging/helpers';
+import type { Class } from 'node_modules/zod/v4/core/util.d.cts';
 
-const logger = getIpcRouterLogger().getChild('setup');
+const logger = getIpcRouterLogger();
+const setupLogger = logger.getChild('setup');
+const requestLogger = logger.getChild('req');
 
 interface RouteEntry {
   method: string;
   path: string;
   handler: Function;
-  service: any;
+  service: Class;
 }
 
 const routes: RouteEntry[] = [];
 
 const activeStreams = new Map<string, AbortController>();
+const streamReadyResolvers = new Map<string, () => void>();
 
 export function setupRouter() {
   services.forEach((service) => {
@@ -54,7 +60,7 @@ export function setupRouter() {
         handler: method.bind(service),
         service
       });
-      logger.info('Registered route {method} {path} -> {service}.{handler}', {
+      setupLogger.info('Registered route {method} {path} -> {service}.{handler}', {
         method: route.method,
         path: route.path,
         service: serviceName,
@@ -64,10 +70,21 @@ export function setupRouter() {
   });
 
   ipcMain.on(FETCH_REQUEST_CHANNEL, async (event: IpcMainEvent, ipcRequest: IpcRequest) => {
+    const startTime = Date.now();
+
+    const reqLogger = requestLogger.with({
+      requestId: ipcRequest.id,
+      method: ipcRequest.method,
+      url: ipcRequest.url
+    });
+
+    reqLogger.info('Request received');
+
     try {
       const route = findRoute(ipcRequest.method, ipcRequest.url);
 
       if (!route) {
+        reqLogger.warn('Route not found');
         sendResponse(event, {
           id: ipcRequest.id,
           status: 404,
@@ -82,30 +99,35 @@ export function setupRouter() {
       activeStreams.set(ipcRequest.id, abortController);
 
       const fullUrl = `http://localhost${ipcRequest.url}`;
-      const body = typeof ipcRequest.body === 'string' ? ipcRequest.body : ipcRequest.body != null ? JSON.stringify(ipcRequest.body) : undefined;
 
       const requestHeaders = new Headers(ipcRequest.headers);
-      if (body && ipcRequest.body && typeof ipcRequest.body !== 'string' && !requestHeaders.has('Content-Type')) {
-        requestHeaders.set('Content-Type', 'application/json');
-      }
 
       const request = new Request(fullUrl, {
         method: ipcRequest.method,
         headers: requestHeaders,
-        body,
+        body: ipcRequest.body,
         signal: abortController.signal
       });
 
       const response: Response = await route.handler(request);
 
-      if (response.body && typeof response.body.getReader === 'function') {
-        logger.debug('Handling stream response {id}', { id: ipcRequest.id });
-        await handleStreamResponse(event, ipcRequest.id, response);
+      if (response.body instanceof ReadableStream) {
+        reqLogger.info('Streaming response');
+        await handleStreamResponse(event, ipcRequest.id, response, reqLogger);
       } else {
+        const duration = Date.now() - startTime;
+        reqLogger.info('Request completed in {duration}ms', {
+          duration,
+          status: response.status
+        });
         await handleRegularResponse(event, ipcRequest.id, response);
       }
     } catch (error) {
-      logger.error('Router error: {error}', { error });
+      const duration = Date.now() - startTime;
+      reqLogger.error('Request failed after {duration}ms: {error}', {
+        duration,
+        error
+      });
       activeStreams.delete(ipcRequest.id);
       sendResponse(event, {
         id: ipcRequest.id,
@@ -120,13 +142,21 @@ export function setupRouter() {
   });
 
   ipcMain.on(FETCH_ABORT_CHANNEL, (_event: IpcMainEvent, abortRequest: IpcAbortRequest) => {
-    logger.info('Abort request received {id}', { id: abortRequest.id });
     const controller = activeStreams.get(abortRequest.id);
     if (controller) {
-      logger.warn('Aborting stream {id}', { id: abortRequest.id });
+      const abortLogger = requestLogger.with({ requestId: abortRequest.id });
+      abortLogger.info('Aborting stream request');
       controller.abort();
-    } else {
-      logger.warn('No active stream found {id}', { id: abortRequest.id });
+    }
+  });
+
+  ipcMain.on(FETCH_STREAM_READY_CHANNEL, (_event: IpcMainEvent, readyMsg: IpcStreamReady) => {
+    const resolver = streamReadyResolvers.get(readyMsg.id);
+    if (resolver) {
+      const readyLogger = requestLogger.with({ requestId: readyMsg.id });
+      readyLogger.debug('Stream ready signal received from renderer');
+      resolver();
+      streamReadyResolvers.delete(readyMsg.id);
     }
   });
 }
@@ -142,11 +172,7 @@ function sendResponse(event: IpcMainEvent, response: IpcResponse) {
 }
 
 async function handleRegularResponse(event: IpcMainEvent, requestId: string, response: Response) {
-  logger.debug('Handling regular response {id}', { id: requestId });
-  const headers: Record<string, string> = {};
-  response.headers.forEach((value, key) => {
-    headers[key] = value;
-  });
+  const headers = headersToObject(response.headers);
 
   const contentType = response.headers.get('Content-Type') || '';
   let body: SerializedBody;
@@ -168,15 +194,12 @@ async function handleRegularResponse(event: IpcMainEvent, requestId: string, res
   });
 }
 
-async function handleStreamResponse(event: IpcMainEvent, requestId: string, response: Response) {
-  const headers: Record<string, string> = {};
-  response.headers.forEach((value, key) => {
-    headers[key] = value;
-  });
+async function handleStreamResponse(event: IpcMainEvent, requestId: string, response: Response, reqLogger: ReturnType<typeof requestLogger.with>) {
+  const headers = headersToObject(response.headers);
 
   const abortController = activeStreams.get(requestId);
   if (!abortController) {
-    logger.error('No AbortController found for request {id}', { id: requestId });
+    reqLogger.error('No AbortController found');
     return;
   }
 
@@ -188,13 +211,28 @@ async function handleStreamResponse(event: IpcMainEvent, requestId: string, resp
     isStream: true
   });
 
+  reqLogger.debug('Waiting for stream ready signal from renderer');
+  await new Promise<void>((resolve) => {
+    streamReadyResolvers.set(requestId, resolve);
+  });
+  reqLogger.debug('Stream ready signal received, starting to send chunks');
+
+  let chunkCount = 0;
+  let bytesTransferred = 0;
+  const streamStartTime = Date.now();
+
   try {
     const reader = response.body!.getReader();
     const decoder = new TextDecoder();
 
     while (true) {
       if (abortController.signal.aborted) {
-        logger.info('Stream aborted {id}', { id: requestId });
+        const duration = Date.now() - streamStartTime;
+        reqLogger.warn('Stream aborted after {duration}ms, {chunks} chunks, {bytes} bytes', {
+          duration,
+          chunks: chunkCount,
+          bytes: bytesTransferred
+        });
         reader.cancel('Request aborted by client');
         activeStreams.delete(requestId);
         if (!event.sender.isDestroyed()) {
@@ -207,6 +245,12 @@ async function handleStreamResponse(event: IpcMainEvent, requestId: string, resp
       const { done, value } = await reader.read();
 
       if (done) {
+        const duration = Date.now() - streamStartTime;
+        reqLogger.info('Stream completed in {duration}ms, {chunks} chunks, {bytes} bytes', {
+          duration,
+          chunks: chunkCount,
+          bytes: bytesTransferred
+        });
         activeStreams.delete(requestId);
         if (!event.sender.isDestroyed()) {
           const end: IpcStreamEnd = { id: requestId };
@@ -217,11 +261,19 @@ async function handleStreamResponse(event: IpcMainEvent, requestId: string, resp
 
       if (!event.sender.isDestroyed()) {
         const text = decoder.decode(value, { stream: true });
+        chunkCount++;
+        bytesTransferred += value.length;
         const chunk: IpcStreamChunk = { id: requestId, data: text };
         event.sender.send(FETCH_STREAM_DATA_CHANNEL, chunk);
       }
     }
   } catch (error) {
+    const duration = Date.now() - streamStartTime;
+    reqLogger.error('Stream error after {duration}ms, {chunks} chunks: {error}', {
+      duration,
+      chunks: chunkCount,
+      error
+    });
     activeStreams.delete(requestId);
     if (!event.sender.isDestroyed()) {
       const errorMsg: IpcStreamError = {

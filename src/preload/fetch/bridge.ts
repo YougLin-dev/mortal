@@ -8,9 +8,9 @@ import type {
   IpcStreamChunk,
   IpcStreamEnd,
   IpcStreamError,
+  IpcStreamReady,
   StreamController,
-  IpcAbortRequest,
-  SerializedBody
+  IpcAbortRequest
 } from '@/shared/types/router';
 import {
   FETCH_REQUEST_CHANNEL,
@@ -18,10 +18,11 @@ import {
   FETCH_STREAM_DATA_CHANNEL,
   FETCH_STREAM_END_CHANNEL,
   FETCH_STREAM_ERROR_CHANNEL,
+  FETCH_STREAM_READY_CHANNEL,
   FETCH_ABORT_CHANNEL
 } from '@/shared/types/fetch';
 import { getPreloadFetchLogger } from '@/shared/logging/helpers';
-import { parseFetchInput } from '@/shared/utils/fetch-utils';
+import { parseFetchInput, headersToObject } from '@/shared/utils/fetch-utils';
 
 const baseLogger = getPreloadFetchLogger();
 
@@ -33,33 +34,39 @@ function generateRequestId(): string {
 
 export function ipcFetch(input: RequestInfo | URL, init?: RequestInit): Promise<IpcResponse> {
   const { url, init: mergedInit } = parseFetchInput(input, init);
+  const id = generateRequestId();
+  const method = mergedInit?.method || 'GET';
 
-  baseLogger.info('ipcFetch called {method} {url}', { method: mergedInit?.method || 'GET', url });
+  const logger = baseLogger.with({
+    requestId: id,
+    method,
+    url
+  });
+
+  logger.info('Sending IPC request');
+
   return new Promise((resolve) => {
-    const id = generateRequestId();
-    const logger = getPreloadFetchLogger({ id });
-    logger.debug('Generated request ID {id}');
-    logger.debug('ipcFetch init {method} {url}', { method: mergedInit?.method || 'GET', url });
-
     const request: IpcRequest = {
       id,
-      method: (mergedInit?.method?.toUpperCase() || 'GET') as HTTPMethod,
+      method: method.toUpperCase() as HTTPMethod,
       url,
       headers: headersToObject(mergedInit?.headers),
-      body: mergedInit?.body as SerializedBody | undefined
+      body: mergedInit?.body as string
     };
 
     const responseHandler = (_event: IpcRendererEvent, response: IpcResponseData) => {
       if (response.id !== id) {
-        logger.warn('ID mismatch, ignoring got={got}, expected{expected}', { got: response.id, expected: id });
+        logger.warn('ID mismatch, ignoring. got={got}, expected={expected}', {
+          got: response.id,
+          expected: id
+        });
         return;
       }
 
-      logger.debug('ID matched; cleaning up and resolving');
       cleanup();
 
       if (response.isStream) {
-        logger.debug('Resolving with STREAM response');
+        logger.debug('Received stream response');
         resolve({
           id: response.id,
           status: response.status,
@@ -67,9 +74,8 @@ export function ipcFetch(input: RequestInfo | URL, init?: RequestInit): Promise<
           headers: response.headers,
           isStream: true
         });
-        logger.debug('STREAM response resolved');
       } else {
-        logger.debug('Resolving with NON-STREAM response');
+        logger.debug('Received regular response');
         resolve({
           id: response.id,
           status: response.status,
@@ -77,7 +83,6 @@ export function ipcFetch(input: RequestInfo | URL, init?: RequestInit): Promise<
           headers: response.headers,
           body: response.body
         });
-        logger.debug('NON-STREAM response resolved');
       }
     };
 
@@ -132,31 +137,16 @@ export function createStreamController(streamId: string): StreamController {
   };
 }
 
-function headersToObject(headers?: HeadersInit): Record<string, string> {
-  if (!headers) return {};
-
-  if (headers instanceof Headers) {
-    const obj: Record<string, string> = {};
-    headers.forEach((value, key) => {
-      obj[key] = value;
-    });
-    return obj;
-  }
-
-  if (Array.isArray(headers)) {
-    const obj: Record<string, string> = {};
-    headers.forEach(([key, value]) => {
-      obj[key] = value;
-    });
-    return obj;
-  }
-
-  return headers as Record<string, string>;
-}
-
 export function abortIpcRequest(id: string): void {
-  const logger = getPreloadFetchLogger({ id });
-  logger.warn('Aborting request {id}', { id });
+  const logger = baseLogger.with({ requestId: id });
+  logger.info('Aborting request');
   const request: IpcAbortRequest = { id };
   ipcRenderer.send(FETCH_ABORT_CHANNEL, request);
+}
+
+export function notifyStreamReady(id: string): void {
+  const logger = baseLogger.with({ requestId: id });
+  logger.debug('Stream ready notification sent');
+  const ready: IpcStreamReady = { id };
+  ipcRenderer.send(FETCH_STREAM_READY_CHANNEL, ready);
 }

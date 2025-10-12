@@ -16,7 +16,7 @@ export interface IpcRequest {
   method: HTTPMethod;
   url: string;
   headers: Record<string, string>;
-  body?: SerializedBody;
+  body?: string;
 }
 
 export interface IpcResponse {
@@ -43,6 +43,10 @@ export interface IpcStreamError {
     message: string;
     stack?: string;
   };
+}
+
+export interface IpcStreamReady {
+  id: string;
 }
 
 export interface IpcAbortRequest {

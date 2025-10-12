@@ -55,6 +55,7 @@ declare global {
     _ipcFetchRaw: (input: RequestInfo | URL, init?: RequestInit) => Promise<IpcResponse>;
     _createStreamController: (streamId: string) => StreamController;
     _abortIpcRequest: (requestId: string) => void;
+    _notifyStreamReady: (requestId: string) => void;
     ipcFetch: (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
     electron: ElectronAPI;
     events: Emitter<GlobalEventDataMap>;

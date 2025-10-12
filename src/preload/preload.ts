@@ -1,7 +1,7 @@
 import { contextBridge } from 'electron';
 
 import { initPreloadBridge, globalEmitter, setupEventForwarding } from './bridge/generator';
-import { ipcFetch, createStreamController, abortIpcRequest } from './fetch/bridge';
+import { ipcFetch, createStreamController, abortIpcRequest, notifyStreamReady } from './fetch/bridge';
 import { electronAPI } from '@electron-toolkit/preload';
 import { getArgumentValue } from '@/shared/utils/preload-utils';
 import type { WindowState } from '@/shared/types/window';
@@ -29,6 +29,7 @@ for (const [serviceName, serviceObj] of Object.entries(bridge)) {
 contextBridge.exposeInMainWorld('_ipcFetchRaw', ipcFetch);
 contextBridge.exposeInMainWorld('_createStreamController', createStreamController);
 contextBridge.exposeInMainWorld('_abortIpcRequest', abortIpcRequest);
+contextBridge.exposeInMainWorld('_notifyStreamReady', notifyStreamReady);
 contextBridge.exposeInMainWorld('events', globalEmitter);
 contextBridge.exposeInMainWorld('electron', electronAPI);
 contextBridge.exposeInMainWorld('windowState', windowState);

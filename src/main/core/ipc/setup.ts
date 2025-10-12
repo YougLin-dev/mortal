@@ -3,6 +3,8 @@ import { services } from '@/main/services';
 import { ipcMain } from 'electron';
 import { getLoggerBy } from '@/shared/logging/helpers';
 
+const logger = getLoggerBy('ipc', 'handlers', 'setup');
+
 export function setupIPC() {
   services.forEach((service) => {
     const Service = service.constructor;
@@ -13,11 +15,10 @@ export function setupIPC() {
       return;
     }
 
-    const logger = getLoggerBy('ipc', 'handlers', 'setup', serviceName);
     for (const [methodName, method] of Object.entries(handlers)) {
       const ipcChannel = `${serviceName}:${methodName}`;
       ipcMain.handle(ipcChannel, method.bind(service));
-      logger.info('Registered handler {channel}', { channel: ipcChannel });
+      logger.info('[{serviceName}] Registered handler {channel}', { serviceName, channel: ipcChannel });
     }
   });
 }
