@@ -4,9 +4,9 @@ import { Handler, Service } from '@/shared/decorators';
 import { getLoggerBy } from '@/shared/logging/helpers';
 import { GLOBAL_EVENTS } from '@/shared/types/event';
 import { getTitlebarView } from '@/shared/types/view';
-import { getRealAppWindows, markGhostWindow } from '@/main/utils/window-utils';
 import { eventEmitterService } from '../events/broadcaster';
 import { shellWindowService } from './shell-window-service';
+import { getAllShellWindows, tagBaseWindow } from '@/shared/types/window';
 
 const logger = getLoggerBy('service', 'ghost-window-service');
 
@@ -34,20 +34,23 @@ export class GhostWindowService {
   private createGhostWindow(): BaseWindow {
     logger.debug('Creating ghost window');
 
-    const win = new BaseWindow({
-      width: 120,
-      height: 32,
-      frame: false,
-      transparent: true,
-      skipTaskbar: true,
-      resizable: false,
-      movable: false,
-      focusable: false,
-      minimizable: false,
-      maximizable: false,
-      backgroundColor: '#00000000',
-      show: false
-    });
+    const win = tagBaseWindow(
+      new BaseWindow({
+        width: 120,
+        height: 32,
+        frame: false,
+        transparent: true,
+        skipTaskbar: true,
+        resizable: false,
+        movable: false,
+        focusable: false,
+        minimizable: false,
+        maximizable: false,
+        backgroundColor: '#00000000',
+        show: false
+      }),
+      'ghost'
+    );
 
     // Create WebContentsView for the ghost window
     const view = new WebContentsView({
@@ -63,9 +66,6 @@ export class GhostWindowService {
 
     // Store view reference
     this.ghostView = view;
-
-    // Mark as ghost window using type-safe WeakSet
-    markGhostWindow(win);
 
     win.setAlwaysOnTop(true, 'floating');
     win.setIgnoreMouseEvents(true, { forward: true });
@@ -105,12 +105,12 @@ export class GhostWindowService {
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
             <style>
               * { margin: 0; padding: 0; box-sizing: border-box; }
-              html, body { 
+              html, body {
                 width: 120px;
                 height: 32px;
                 overflow: hidden;
               }
-              body { 
+              body {
                 background: #ffffff;
                 display: flex;
                 align-items: center;
@@ -181,7 +181,7 @@ export class GhostWindowService {
       this.ghostWindow.hide();
 
       // If no real app windows remain, destroy ghost to allow window-all-closed to fire
-      if (getRealAppWindows().length === 0) {
+      if (getAllShellWindows().length === 0) {
         logger.debug('No real app windows remain, destroying ghost window');
         this.ghostWindow.destroy();
         this.ghostWindow = null;

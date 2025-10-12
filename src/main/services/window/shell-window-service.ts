@@ -3,11 +3,10 @@ import { TITLE_BAR_OVERLAY, WIN } from '@/shared/consts/ui';
 import { Handler, Service } from '@/shared/decorators';
 import { getLoggerBy } from '@/shared/logging/helpers';
 import { getContentViews, getTitlebarView, getWindowByWebContents, tagView, type TaggedWebContentsView } from '@/shared/types/view';
-import type { Tab, WindowState } from '@/shared/types/window';
+import { getAllShellWindows, isGhostWindow, tagBaseWindow, type Tab, type WindowState } from '@/shared/types/window';
 import { toArgument } from '@/shared/utils/preload-utils';
 import { isDev } from '@/main/utils/dev';
 import { isMac } from '@/main/utils/platform';
-import { getRealAppWindows, isGhostWindow } from '@/main/utils/window-utils';
 import { BaseWindow, Menu, nativeTheme, WebContentsView, type IpcMainInvokeEvent, type WebContents } from 'electron';
 import * as path from 'node:path';
 import { WindowStateManager } from './window-state-manager';
@@ -215,7 +214,7 @@ export class ShellWindowService {
   }
 
   public findWindowAtPoint(screenX: number, screenY: number): { win: BaseWindow; windowId: string } | null {
-    const allWindows = getRealAppWindows();
+    const allWindows = getAllShellWindows();
     for (const win of allWindows) {
       if (win.isDestroyed()) continue;
 
@@ -241,25 +240,28 @@ export class ShellWindowService {
   /// private
   #buildWindowByWindowState(windowStateManager: WindowStateManager, opts?: { skipActiveTabContent?: boolean }) {
     const { shouldUseDarkColors } = nativeTheme;
-    const newWindow = new BaseWindow({
-      show: false,
-      x: windowStateManager.x,
-      y: windowStateManager.y,
-      width: windowStateManager.width,
-      height: windowStateManager.height,
-      minWidth: WIN.MIN_WIDTH,
-      minHeight: WIN.MIN_HEIGHT,
-      fullscreen: windowStateManager.isFullScreen,
-      alwaysOnTop: windowStateManager.isAlwaysOnTop,
-      backgroundColor: isMac ? undefined : shouldUseDarkColors ? WIN.BACKGROUND_CORLOR.DARK : WIN.BACKGROUND_CORLOR.LIGHT,
-      autoHideMenuBar: true,
-      titleBarStyle: isMac ? 'hiddenInset' : 'hidden',
-      titleBarOverlay: !isMac ? (shouldUseDarkColors ? TITLE_BAR_OVERLAY.DARK : TITLE_BAR_OVERLAY.LIGHT) : undefined,
-      darkTheme: shouldUseDarkColors,
-      frame: false,
-      transparent: false,
-      icon: path.join(import.meta.dirname, './resources/images/icon.png')
-    });
+    const newWindow = tagBaseWindow(
+      new BaseWindow({
+        show: false,
+        x: windowStateManager.x,
+        y: windowStateManager.y,
+        width: windowStateManager.width,
+        height: windowStateManager.height,
+        minWidth: WIN.MIN_WIDTH,
+        minHeight: WIN.MIN_HEIGHT,
+        fullscreen: windowStateManager.isFullScreen,
+        alwaysOnTop: windowStateManager.isAlwaysOnTop,
+        backgroundColor: isMac ? undefined : shouldUseDarkColors ? WIN.BACKGROUND_CORLOR.DARK : WIN.BACKGROUND_CORLOR.LIGHT,
+        autoHideMenuBar: true,
+        titleBarStyle: isMac ? 'hiddenInset' : 'hidden',
+        titleBarOverlay: !isMac ? (shouldUseDarkColors ? TITLE_BAR_OVERLAY.DARK : TITLE_BAR_OVERLAY.LIGHT) : undefined,
+        darkTheme: shouldUseDarkColors,
+        frame: false,
+        transparent: false,
+        icon: path.join(import.meta.dirname, './resources/images/icon.png')
+      }),
+      'shell'
+    );
 
     this.windows.set(newWindow, { windowId: windowStateManager.windowState.windowId });
 
@@ -368,7 +370,7 @@ export class ShellWindowService {
 
       // Delete window state from storage if not the last window
       // (Last window's state is handled by window-all-closed event in main.ts)
-      const remainingWindows = getRealAppWindows();
+      const remainingWindows = getAllShellWindows();
       if (windowId && remainingWindows.length > 0) {
         // Use async removeItem + immediate flush to ensure deletion
         storage

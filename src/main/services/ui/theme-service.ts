@@ -7,7 +7,7 @@ import { STORAGES } from '@/shared/types/storage-key';
 import { storage } from '@/main/core/storage/config';
 import { getLoggerBy } from '@/shared/logging/helpers';
 import { getContentViews, getTitlebarView } from '@/shared/types/view';
-import { getRealAppWindows } from '@/main/utils/window-utils';
+import { getAllShellWindows } from '@/shared/types/window';
 
 const logger = getLoggerBy('service', 'theme');
 
@@ -28,7 +28,7 @@ export class ThemeService {
   @Handler
   setTheme(_event: IpcMainInvokeEvent, theme: ThemeType): void {
     nativeTheme.themeSource = theme;
-    const allWindows = getRealAppWindows();
+    const allWindows = getAllShellWindows();
     const topViewbackgroundColor = nativeTheme.shouldUseDarkColors ? WIN.BACKGROUND_CORLOR.DARK : WIN.BACKGROUND_CORLOR.LIGHT;
     const bottomBackgroundColor = topViewbackgroundColor;
 

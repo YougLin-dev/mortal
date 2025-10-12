@@ -9,10 +9,10 @@ import { setupRouter } from './core/router/setup';
 import { storage } from './core/storage/config';
 import { WindowStateManager } from './services/window/window-state-manager';
 import { isMac } from '@/main/utils/platform';
-import { getRealAppWindows } from '@/main/utils/window-utils';
 import { initLogging } from '@/shared/logging/config';
 import { getLoggerBy } from '@/shared/logging/helpers';
 import { setupProtocolHandlers, shellWindowService } from './services/window/shell-window-service';
+import { getAllShellWindows } from '@/shared/types/window';
 
 initLogging('main');
 const logger = getLoggerBy('app', 'lifecycle');
@@ -38,7 +38,7 @@ if (!gotTheLock) {
 } else {
   // Focus existing window when a second instance is launched
   app.on('second-instance', async () => {
-    const all = getRealAppWindows();
+    const all = getAllShellWindows();
     if (all.length > 0) {
       const window = all[0];
       if (window.isMinimized()) window.restore();
@@ -72,7 +72,7 @@ if (!gotTheLock) {
   });
 
   app.on('activate', async () => {
-    if (getRealAppWindows().length === 0) {
+    if (getAllShellWindows().length === 0) {
       resotreWindows();
     }
   });
