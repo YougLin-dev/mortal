@@ -47,7 +47,7 @@
 
   function handleDndConsider(e: CustomEvent<TabDndEvent>) {
     const { info, items: newItems } = e.detail;
-    if (info.trigger === 'DRAG_STARTED') {
+    if (info.trigger === TRIGGERS.DRAG_STARTED) {
       isDragging = true;
       windowStore.reorderTabs(newItems, info.id);
     } else if (info.trigger === TRIGGERS.DRAG_OUT) {

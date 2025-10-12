@@ -67,7 +67,7 @@ export class GhostWindowService {
     // Store view reference
     this.ghostView = view;
 
-    win.setAlwaysOnTop(true, 'floating');
+    win.setAlwaysOnTop(true, 'screen-saver');
     win.setIgnoreMouseEvents(true, { forward: true });
     win.setResizable(false);
 
