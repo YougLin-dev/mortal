@@ -15,7 +15,6 @@ import { ghostWindowService } from '../window/ghost-window-service';
 
 const logger = getLoggerBy('service', 'tab-service');
 
-const bottomViewPadding = 4;
 const topViewHeight = TITLE_BAR_OVERLAY.DARK.height;
 
 @Service
@@ -217,10 +216,10 @@ export class TabService {
 
         // Update view bounds for new window
         const [newWidth, newHeight] = newWindow.getSize();
-        const bottomWidth = newWidth - bottomViewPadding * 2;
-        const bottomHeight = newHeight - topViewHeight - bottomViewPadding;
+        const bottomWidth = newWidth;
+        const bottomHeight = newHeight - topViewHeight;
         view.setBounds({
-          x: bottomViewPadding,
+          x: 0,
           y: topViewHeight,
           width: bottomWidth,
           height: bottomHeight
@@ -349,10 +348,10 @@ export class TabService {
 
         // Update view bounds for target window
         const [targetWidth, targetHeight] = targetWin.getSize();
-        const bottomWidth = targetWidth - bottomViewPadding * 2;
-        const bottomHeight = targetHeight - topViewHeight - bottomViewPadding;
+        const bottomWidth = targetWidth;
+        const bottomHeight = targetHeight - topViewHeight;
         view.setBounds({
-          x: bottomViewPadding,
+          x: 0,
           y: topViewHeight,
           width: bottomWidth,
           height: bottomHeight

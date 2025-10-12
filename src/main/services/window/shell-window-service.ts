@@ -23,10 +23,7 @@ const INDEX = {
   LOADING: 'loading.html'
 };
 
-const bottomViewPadding = 4;
-
 const topViewHeight = TITLE_BAR_OVERLAY.DARK.height;
-const bottomViewLeft = bottomViewPadding;
 
 const titlebarProtocol = new AppProtocol(
   'titlebar',
@@ -111,12 +108,10 @@ export class ShellWindowService {
       return null;
     }
 
-    const { shouldUseDarkColors } = nativeTheme;
-
     const windowState = storage.getSync(STORAGES.APP_WINDOWS(windowId));
     const [width, height] = window.getSize();
-    const bottomWidth = width - bottomViewPadding * 2;
-    const bottomHeight = height - topViewHeight - bottomViewPadding;
+    const bottomWidth = width;
+    const bottomHeight = height - topViewHeight;
 
     const view = tagView(
       new WebContentsView({
@@ -127,16 +122,15 @@ export class ShellWindowService {
           allowRunningInsecureContent: false,
           experimentalFeatures: false,
           devTools: isDev,
-          additionalArguments: [toArgument('windowState', windowState), toArgument('locale', storage.getSync(STORAGES.APP_I18N_LOCALE))]
+          additionalArguments: [toArgument('windowState', windowState), toArgument('locale', storage.getSync(STORAGES.APP_I18N_LOCALE))],
+          transparent: true
         }
       }),
       'content',
       tabId
     );
 
-    const backgroundColor = isMac ? '#ffffff' : shouldUseDarkColors ? WIN.BACKGROUND_CORLOR.DARK : WIN.BACKGROUND_CORLOR.LIGHT;
-    view.setBackgroundColor(backgroundColor);
-    view.setBounds({ x: bottomViewLeft, y: topViewHeight, width: bottomWidth, height: bottomHeight });
+    view.setBounds({ x: 0, y: topViewHeight, width: bottomWidth, height: bottomHeight });
 
     return view;
   }
@@ -265,11 +259,8 @@ export class ShellWindowService {
 
     this.windows.set(newWindow, { windowId: windowStateManager.windowState.windowId });
 
-    const topViewBackgroundColor = isMac ? '#ffffff' : shouldUseDarkColors ? WIN.BACKGROUND_CORLOR.DARK : WIN.BACKGROUND_CORLOR.LIGHT;
-    const bottomBackgroundColor = topViewBackgroundColor;
-
-    const bottomViewWidth = windowStateManager.width - bottomViewPadding * 2;
-    const bottomViewHeight = windowStateManager.height - topViewHeight - bottomViewPadding;
+    const bottomViewWidth = windowStateManager.width;
+    const bottomViewHeight = windowStateManager.height - topViewHeight;
 
     const argumenst = [toArgument('windowState', windowStateManager.windowState), toArgument('locale', storage.getSync(STORAGES.APP_I18N_LOCALE))];
 
@@ -283,13 +274,13 @@ export class ShellWindowService {
           allowRunningInsecureContent: false,
           experimentalFeatures: false,
           devTools: isDev,
-          additionalArguments: argumenst
+          additionalArguments: argumenst,
+          transparent: true
         }
       }),
       'titlebar'
     );
 
-    topView.setBackgroundColor(topViewBackgroundColor);
     topView.setBounds({ x: 0, y: 0, width: windowStateManager.width, height: topViewHeight });
 
     // loading
@@ -302,14 +293,14 @@ export class ShellWindowService {
           allowRunningInsecureContent: false,
           experimentalFeatures: false,
           devTools: isDev,
-          additionalArguments: argumenst
+          additionalArguments: argumenst,
+          transparent: true
         }
       }),
       'content',
       '__loading__'
     );
-    loadingView.setBackgroundColor(bottomBackgroundColor);
-    loadingView.setBounds({ x: bottomViewLeft, y: topViewHeight, width: bottomViewWidth, height: bottomViewHeight });
+    loadingView.setBounds({ x: 0, y: topViewHeight, width: bottomViewWidth, height: bottomViewHeight });
 
     // content views (only active tab)
     const activeTab = windowStateManager.windowState.tabs.find((tab) => tab.isActive);
@@ -330,17 +321,15 @@ export class ShellWindowService {
     // resize view's size when window resizing
     newWindow.on('resize', () => {
       const [width, height] = newWindow.getSize();
-      const newBottomHeight = height - topViewHeight - bottomViewPadding;
-      const newBottomWidth = width - bottomViewPadding * 2;
+      const newBottomHeight = height - topViewHeight;
+      const newBottomWidth = width;
 
       const titlebarView = getTitlebarView(newWindow);
       const contentViews = getContentViews(newWindow);
 
       if (titlebarView) titlebarView.setBounds({ x: 0, y: 0, height: topViewHeight, width });
 
-      contentViews.forEach((contentView) =>
-        contentView.setBounds({ x: bottomViewLeft, y: topViewHeight, width: newBottomWidth, height: newBottomHeight })
-      );
+      contentViews.forEach((contentView) => contentView.setBounds({ x: 0, y: topViewHeight, width: newBottomWidth, height: newBottomHeight }));
     });
 
     // Clean up DevTools when window closes (dev mode)

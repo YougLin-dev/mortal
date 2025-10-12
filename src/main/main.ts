@@ -1,4 +1,5 @@
 import './env';
+import './core/logger/setup';
 
 import './services';
 
@@ -9,12 +10,10 @@ import { setupRouter } from './core/router/setup';
 import { storage } from './core/storage/config';
 import { WindowStateManager } from './services/window/window-state-manager';
 import { isMac } from '@/main/utils/platform';
-import { initLogging } from '@/shared/logging/config';
 import { getLoggerBy } from '@/shared/logging/helpers';
 import { setupProtocolHandlers, shellWindowService } from './services/window/shell-window-service';
 import { getAllShellWindows } from '@/shared/types/window';
 
-initLogging('main');
 const logger = getLoggerBy('app', 'lifecycle');
 
 function resotreWindows() {

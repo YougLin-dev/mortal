@@ -26,6 +26,6 @@
 </script>
 
 <!-- Main content with top padding to avoid titlebar overlay -->
-<main class="h-screen w-screen overflow-hidden rounded-md bg-background">
+<main class="mx-2 mb-2 h-[calc(100vh-var(--spacing)*2)] w-[calc(100vw-var(--spacing)*4)] overflow-hidden rounded-md bg-background">
   <Router id="content-router" {routes} />
 </main>
