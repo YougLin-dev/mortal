@@ -10,11 +10,24 @@ import { setupRouter } from './core/router/setup';
 import { storage } from './core/storage/config';
 import { WindowStateManager } from './services/window/window-state-manager';
 import { isMac } from '@/main/utils/platform';
+import { isDev } from '@/main/utils/dev';
 import { getLoggerBy } from '@/shared/logging/helpers';
 import { setupProtocolHandlers, shellWindowService } from './services/window/shell-window-service';
 import { getAllShellWindows } from '@/shared/types/window';
 
 const logger = getLoggerBy('app', 'lifecycle');
+
+async function installDevtron() {
+  const { devtron } = await import('@electron/devtron');
+  await devtron.install({ logLevel: 'info' });
+  logger.info('Devtron installed successfully');
+}
+
+if (isDev) {
+  installDevtron().catch((error) => {
+    logger.error('Failed to install Devtron: {error}', { error });
+  });
+}
 
 function resotreWindows() {
   storage.getKeysSync('app:windows').forEach((key) => {

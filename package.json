@@ -45,6 +45,7 @@
     "@electron-toolkit/eslint-config-prettier": "^3.0.0",
     "@electron-toolkit/eslint-config-ts": "^3.1.0",
     "@electron-toolkit/tsconfig": "^2.0.0",
+    "@electron/devtron": "^2.1.0",
     "@electron/fuses": "^1.8.0",
     "@internationalized/date": "^3.10.0",
     "@lucide/svelte": "^0.545.0",
