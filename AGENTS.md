@@ -42,14 +42,20 @@ The app uses a **BaseWindow + WebContentsView architecture** instead of traditio
 - **WebContentsView**: Separate views for titlebar, content, and loading states
 - **View Tagging System**: Tracks views across windows with `__viewType` and `__tabId` tags
 - **Independent Views**: Each tab gets its own WebContentsView, enabling isolated rendering
-- **Multi-Protocol Support**: Separate protocols for titlebar (`titlebar://`), content (`content://`), and loading (`loading://`)
+- **Multi-Protocol Support**: Three separate protocols using unified `AppProtocol` class:
+  - `titlebar://localhost` - Titlebar UI (loads `titlebar.html`)
+  - `content://localhost` - Main content area (loads `content.html`)
+  - `loading://localhost` - Loading placeholder (loads `loading.html`)
 - **Detachable Tabs**: Tabs can be dragged out of the tab bar to create a new ShellWindow; the detached tab becomes the active content view in the new window
+- **Ghost Window System**: Transparent floating window that follows cursor during tab drag operations, with visual feedback for drop targets
 
 **Key files:**
 
 - Shell window service: `src/main/services/window/shell-window-service.ts`
+- Ghost window service: `src/main/services/window/ghost-window-service.ts`
 - View utilities: `src/shared/types/view.ts`
-- Protocol handlers: `src/main/core/protocols/app-protocol.ts`
+- Window utilities: `src/shared/types/window.ts`
+- Protocol handler base: `src/main/core/protocols/app-protocol.ts`
 
 **View hierarchy example:**
 
@@ -177,6 +183,7 @@ export class ExampleService {
 - `window.tabService` - Tab switching, lifecycle management, and tab detachment
 - `window.storageService` - Key-value storage operations
 - `window.eventEmitterService` - Event broadcasting
+- `window.ghostWindowService` - Ghost window for tab drag-and-drop visual feedback
 
 **Choosing between @Handler and @Route:**
 
@@ -207,13 +214,18 @@ return stream.aisdk.v5.toUIMessageStreamResponse();
 2. Register agent in `src/main/mastra/index.ts` Mastra configuration
 3. Access agent via `mastra.getAgent('agentName')` in routes or handlers
 
-#### 4. Custom app:// Protocol Handler
+#### 4. Custom Protocol Handler
 
-The app implements a **custom protocol handler** for loading renderer files:
+The app implements **unified protocol handlers** using the `AppProtocol` class:
 
-- **Protocol**: `app://` scheme for secure file loading
-- **SPA support**: Routes without file extensions fall back to `index.html`
+- **AppProtocol class**: Reusable base class for custom protocol handling
+- **Three protocol instances**:
+  - `titlebar://localhost` - Titlebar UI rendering
+  - `content://localhost` - Main application content
+  - `loading://localhost` - Loading placeholder views
+- **SPA support**: Routes without file extensions fall back to specified index HTML file
 - **Security**: Path traversal protection ensures files stay within renderer base
+- **Setup**: All protocols registered via `setupProtocolHandlers()` in main.ts
 - **Location**: `src/main/core/protocols/app-protocol.ts`
 
 #### 5. Platform Utilities
@@ -304,8 +316,9 @@ Storage is initialized in `src/main/core/storage/config.ts` with migration hooks
 - **UI Components**: Located in `src/renderer/lib/components/`
   - Custom titlebar with window controls
   - shadcn-svelte inspired component library (`src/renderer/lib/components/ui/`)
-  - Tab bar for multi-tab interface
-  - Developer tools panel
+  - Tab bar for multi-tab interface (`src/renderer/lib/components/tabbar/`)
+  - Language selector (`src/renderer/lib/components/selector/`)
+  - Developer tools panel (`src/renderer/lib/components/registry/`)
 - **TailwindCSS v4**: For styling with custom titlebar implementation
 - **Runes-based**: Uses Svelte 5 `$state`, `$derived`, `$effect` patterns
 
@@ -338,6 +351,12 @@ The app uses a **unified event channel** for cross-process communication:
 - `theme-changed` - Theme state updates
 - `theme-error` - Theme-related errors
 - `storage:*` - Storage value changes (pattern-based)
+- `tab-context-menu-action` - Tab context menu actions
+- `tab-detached` - Tab detached to new window
+- `tab-attached` - Tab attached to window
+- `tab-drag-ghost-hover` - Ghost window hovering over tab bar
+- `tab-drag-ghost-clear` - Clear ghost window hover state
+- `window-state-update` - Window state changes
 
 **Using events:**
 
