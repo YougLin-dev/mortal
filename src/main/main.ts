@@ -29,7 +29,7 @@ if (isDev) {
   });
 }
 
-function resotreWindows() {
+function restoreWindows() {
   storage.getKeysSync('app:windows').forEach((key) => {
     const windowState = storage.getItemSync(key as 'app:windows:');
     if (windowState) shellWindowService.createWindow(windowState);
@@ -57,7 +57,7 @@ if (!gotTheLock) {
       if (!window.isVisible()) window.show();
       window.focus();
     } else if (app.isReady()) {
-      resotreWindows();
+      restoreWindows();
     }
   });
 
@@ -69,7 +69,7 @@ if (!gotTheLock) {
     setupRouter();
     setupProtocolHandlers();
 
-    resotreWindows();
+    restoreWindows();
   });
 
   app.on('window-all-closed', async () => {
@@ -85,7 +85,7 @@ if (!gotTheLock) {
 
   app.on('activate', async () => {
     if (getAllShellWindows().length === 0) {
-      resotreWindows();
+      restoreWindows();
     }
   });
 }
