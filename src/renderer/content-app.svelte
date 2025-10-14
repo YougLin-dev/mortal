@@ -1,31 +1,11 @@
 <script lang="ts">
-  import { Router } from '@mateothegreat/svelte5-router';
-  import type { RouteConfig } from '@mateothegreat/svelte5-router';
-  import ChatPage from './pages/chat-page.svelte';
-  import SettingsPage from './pages/settings/settings-page.svelte';
-  import WelcomePage from './pages/welcome-page.svelte';
+  import Router from '$lib/router/components/router.svelte';
+  import { routes } from './routes';
 
-  const routes: RouteConfig[] = [
-    {
-      path: '',
-      component: WelcomePage
-    },
-    {
-      path: 'welcome',
-      component: WelcomePage
-    },
-    {
-      path: 'chat(?:/(?<id>.*))?',
-      component: ChatPage
-    },
-    {
-      path: 'settings',
-      component: SettingsPage
-    }
-  ];
+  const options = { routes, hash: true } as const;
 </script>
 
 <!-- Main content with top padding to avoid titlebar overlay -->
 <main class="mx-2 mb-2 h-[calc(100vh-var(--spacing)*2)] w-[calc(100vw-var(--spacing)*4)] overflow-hidden rounded-md bg-background">
-  <Router id="content-router" {routes} />
+  <Router {options} />
 </main>

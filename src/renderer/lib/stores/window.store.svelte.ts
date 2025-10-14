@@ -28,7 +28,7 @@ const initialWindowState = window.windowState ? (superjson.parse(superjson.strin
  * windowStore.activeTab
  *
  * // Actions
- * windowStore.addTab()
+ * windowStore.addChatTab()
  * windowStore.removeTab(id)
  * windowStore.toggleAlwaysOnTop()
  * ```
@@ -172,7 +172,7 @@ class WindowStore {
   /**
    * Add a new empty tab and activate it
    */
-  addTab(): void {
+  addChatTab(): void {
     const newTabId = nanoid(6);
     const newTabUrl = '/chat/' + newTabId;
 
@@ -184,6 +184,29 @@ class WindowStore {
       .concat({
         id: newTabId,
         name: 'New Tab' + newTabId,
+        isActive: true,
+        pinned: false,
+        url: newTabUrl
+      });
+
+    // Create and display the contentView for the new tab
+    window.tabService.switchTab(newTabId, newTabUrl).catch((error) => {
+      logger.error('Failed to create tab view', { error, tabId: newTabId });
+    });
+  }
+
+  addSettingTab(): void {
+    const newTabId = nanoid(6);
+    const newTabUrl = '/settings/general';
+
+    this.tabs = this.tabs
+      .map((tab) => ({
+        ...tab,
+        isActive: false
+      }))
+      .concat({
+        id: newTabId,
+        name: '设置',
         isActive: true,
         pinned: false,
         url: newTabUrl
@@ -257,7 +280,7 @@ class WindowStore {
     // If all tabs are closed, create a new tab automatically
     if (this.tabs.length === 0) {
       logger.debug('All tabs closed, creating new tab');
-      this.addTab();
+      this.addChatTab();
     }
   }
 
@@ -297,7 +320,7 @@ class WindowStore {
     // If all tabs are closed, create a new tab automatically
     if (this.tabs.length === 0) {
       logger.debug('All tabs closed after detach, creating new tab');
-      this.addTab();
+      this.addChatTab();
     }
   }
 

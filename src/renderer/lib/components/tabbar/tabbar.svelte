@@ -42,7 +42,7 @@
   let isDraggingOut = $state(false);
 
   function handleNewTab() {
-    windowStore.addTab();
+    windowStore.addChatTab();
   }
 
   function handleDndConsider(e: CustomEvent<TabDndEvent>) {

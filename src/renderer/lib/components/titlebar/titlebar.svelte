@@ -5,6 +5,7 @@
   import { GLOBAL_EVENTS } from '@/shared/types/event';
   import { getLoggerBy } from '@/shared/logging/helpers';
   import { onMount } from 'svelte';
+  import SettingsTrigger from './settings-trigger.svelte';
 
   const logger = getLoggerBy('component', 'titlebar');
 
@@ -85,9 +86,10 @@
 </script>
 
 <header class="fixed top-titlebar-area-y right-0 left-titlebar-area-x z-50 flex h-titlebar-h w-titlebar-w items-center" style="app-region: drag;">
-  <TabBar class="w-[calc(100%-82px)]" />
+  <TabBar class="w-[calc(100%-122px)]" />
   <PinSwitch class="mr-2" style="app-region: no-drag;" />
-  <ThemeSwitch class="mr-auto" style="app-region: no-drag;" />
+  <ThemeSwitch class="mr-2" style="app-region: no-drag;" />
+  <SettingsTrigger class="mr-auto" style="app-region: no-drag;" />
 
   {#if insertIndicatorX !== null}
     <div

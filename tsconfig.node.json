@@ -14,7 +14,9 @@
     "allowImportingTsExtensions": true,
     "verbatimModuleSyntax": true,
     "moduleDetection": "force",
-    "noEmit": true,
+    "declaration": true,
+    "emitDeclarationOnly": true,
+    "outDir": "./node_modules/.tmp/types/node",
 
     /* Linting */
     "strict": true,
@@ -29,8 +31,8 @@
       "@/main/*": ["src/main/*"],
       "@/shared/*": ["src/shared/*"],
       "@/preload/*": ["src/preload/*"],
-      "@/vite-plugins/*": ["vite-plugins/*"],
+      "@/vite-plugins/*": ["vite-plugins/*"]
     }
   },
-  "include": ["vite.*.ts","src/main/**/*.ts", "src/preload/**/*.ts", "src/shared/**/*.ts", "vite-plugins/**/*.ts"],
+  "include": ["vite.*.ts","src/main/**/*.ts", "src/preload/**/*.ts", "src/shared/**/*.ts", "vite-plugins/**/*.ts"]
 }

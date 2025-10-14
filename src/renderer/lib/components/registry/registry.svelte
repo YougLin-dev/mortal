@@ -1,14 +1,12 @@
 <script lang="ts">
-  import { registry } from '@mateothegreat/svelte5-router';
+  import { useRouter } from '$lib/router/context';
+
+  const router = $derived(useRouter());
 </script>
 
 <div>
-  {#each registry.instances.entries() as [id, instance] (id)}
-    <div>
-      <pre>id: {id}</pre>
-      <pre>routes: {instance.routes.size}</pre>
-      <pre>current: {instance.current?.path || '<default>'}</pre>
-      <pre>navigating: {instance.navigating ? 'yes' : 'no'}</pre>
-    </div>
-  {/each}
+  <div>
+    <pre>current path: {router.state?.path || '<unknown>'}</pre>
+    <pre>routes: {router.state?.matches.length || 0}</pre>
+  </div>
 </div>

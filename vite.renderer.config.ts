@@ -3,6 +3,8 @@ import { svelte } from '@sveltejs/vite-plugin-svelte';
 import tailwindcss from '@tailwindcss/vite';
 import { resolve } from 'path';
 
+const isDev = process.env.NODE_ENV !== 'production';
+
 // https://vite.dev/config/
 export default defineConfig({
   root: resolve(__dirname, 'src/renderer'),
@@ -22,7 +24,7 @@ export default defineConfig({
       }
     },
     outDir: resolve(__dirname, '.vite/build/renderer/main_window'),
-    sourcemap: false,
+    sourcemap: isDev,
     minify: 'terser',
     terserOptions: {
       compress: {

@@ -1,34 +1,11 @@
 <script lang="ts">
-  import { Router, goto, route } from '@mateothegreat/svelte5-router';
-  import { type RouteResult, type RouteConfig } from '@mateothegreat/svelte5-router';
+  import type { Snippet } from 'svelte';
+  import { link } from '$lib/router/actions/link';
+  import { active } from '$lib/router/actions/active';
 
-  import GeneralSettings from './general-settings.svelte';
-  import ProviderSettings from './provider-settings.svelte';
-  import AboutSettings from './about-settings.svelte';
+  let { children }: { children: Snippet } = $props();
 
-  const settingsRoutes: RouteConfig[] = [
-    {
-      hooks: {
-        pre: async (route: RouteResult) => {
-          if (route.result.path.original === 'settings') {
-            goto('settings/general');
-          }
-        }
-      }
-    },
-    {
-      path: 'general',
-      component: GeneralSettings
-    },
-    {
-      path: 'providers',
-      component: ProviderSettings
-    },
-    {
-      path: 'about',
-      component: AboutSettings
-    }
-  ];
+  let count = $state(1);
 </script>
 
 <div class="flex h-screen flex-col">
@@ -36,28 +13,37 @@
     <div class="flex h-full">
       <aside class="w-64 border-r border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
         <nav class="space-y-2 p-4">
+          <div>
+            Count: {count}
+            <button class="ml-2 rounded bg-blue-500 px-2 py-1 text-white" onclick={() => count++}> Increment </button>
+            <button class="ml-2 rounded bg-blue-500 px-2 py-1 text-white" onclick={() => count--}> Decrement </button>
+          </div>
           <a
-            use:route
-            href="general"
+            use:link
+            use:active={{ className: 'bg-gray-100' }}
+            href="#/settings/general"
             class="flex items-center rounded-lg px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700"
             >General</a
           >
           <a
-            use:route
-            href="providers"
+            use:link
+            use:active={{ className: 'bg-gray-100' }}
+            href="#/settings/providers"
             class="flex items-center rounded-lg px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700"
             >Providers</a
           >
           <a
-            use:route
-            href="about"
+            use:link
+            use:active={{ className: 'bg-gray-100' }}
+            href="#/settings/about"
             class="flex items-center rounded-lg px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700"
             >About</a
           >
         </nav>
       </aside>
       <div class="flex-1 overflow-y-auto p-8">
-        <Router routes={settingsRoutes} basePath="settings" />
+        <!-- Nested outlet - will render the child route (depth 1) -->
+        {@render children()}
       </div>
     </div>
   </main>
