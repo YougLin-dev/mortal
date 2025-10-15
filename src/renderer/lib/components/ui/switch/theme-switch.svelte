@@ -12,12 +12,7 @@
   onclick={() => themeStore.toggle()}
   title="主题切换"
   {style}
-  class={cn(
-    buttonVariants({ variant: 'ghost', size: 'icon' }),
-    'rounded-full transition-none hover:bg-[#E8E8E8] hover:dark:bg-[#2C2C2C]',
-    themeStore.isTransitioning && 'hover:bg-transparent hover:dark:bg-transparent',
-    className
-  )}
+  class={cn(buttonVariants({ variant: 'ghost', size: 'icon' }), 'rounded-full transition-none hover:bg-[#E8E8E8] hover:dark:bg-[#2C2C2C]', className)}
 >
   <SunIcon class="h-[1.2rem] w-[1.2rem] scale-100 rotate-0 transition-[rotate] dark:scale-0 dark:-rotate-90" />
   <MoonIcon class="absolute h-[1.2rem] w-[1.2rem] scale-0 rotate-90 transition-[rotate] dark:scale-100 dark:rotate-0" />

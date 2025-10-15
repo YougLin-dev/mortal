@@ -12,7 +12,7 @@ const logger = getLoggerBy('storage', 'service');
 export class StorageService {
   private globalWatcher?: () => void;
   private subscribers = new Set<string>();
-  private senderQueues = new Map<string, number[]>();
+  private latestSenders = new Map<string, number>();
 
   constructor() {
     this.initGlobalWatcher();
@@ -23,11 +23,10 @@ export class StorageService {
       if (!this.subscribers.has(key)) return;
 
       const newValue = await storage.getItem(key);
-      const queue = this.senderQueues.get(key);
-      const senderId = queue?.pop();
+      const senderId = this.latestSenders.get(key);
 
-      if (queue) {
-        this.senderQueues.delete(key);
+      if (senderId) {
+        this.latestSenders.delete(key);
       }
 
       logger.debug('Storage changed for key {key}, using last sender {senderId} (queue cleared)', {
@@ -41,9 +40,7 @@ export class StorageService {
 
   @Handler
   async setItem(event: IpcMainInvokeEvent, key: string, value: StorageValue): Promise<void> {
-    const queue = this.senderQueues.get(key) || [];
-    queue.push(event.sender.id);
-    this.senderQueues.set(key, queue);
+    this.latestSenders.set(key, event.sender.id);
 
     await storage.setItem(key, value);
   }
@@ -100,9 +97,7 @@ export class StorageService {
   @Handler
   async setItems(event: IpcMainInvokeEvent, items: StorageItem[]): Promise<void> {
     items.forEach((item) => {
-      const queue = this.senderQueues.get(item.key) || [];
-      queue.push(event.sender.id);
-      this.senderQueues.set(item.key, queue);
+      this.latestSenders.set(item.key, event.sender.id);
     });
 
     const formattedItems = items.map((item) => ({

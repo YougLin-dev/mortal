@@ -23,7 +23,10 @@ export const storage = createStorage<APPStorage>({
     maxQueueSize: 1e3,
     mergeUpdates: true,
     driver: fsDriver({
-      base: storagePath
+      base: storagePath,
+      // Avoid duplicate watch events: theme subtree is mounted separately
+      // at `app:theme`, so the root watcher should ignore it.
+      ignore: ['**/app/theme/**']
     })
   }),
   version: 1,

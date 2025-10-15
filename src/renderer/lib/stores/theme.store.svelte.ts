@@ -2,7 +2,6 @@ import type { ThemeState, ThemeType } from '@/shared/types/theme';
 import { PersistedStore } from '$lib/stores/core/persisted-store.svelte';
 import { STORAGES } from '@/shared/types/storage-key';
 import { createRootEffect } from '$lib/stores/core/create-root-effect.svelte';
-import { untrack } from 'svelte';
 
 const getSystemTheme = (): ThemeState => {
   const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
@@ -37,7 +36,6 @@ const getSystemTheme = (): ThemeState => {
  */
 class ThemeStore {
   #persisted: PersistedStore<ThemeState>;
-  #isTransitioning = $state(false);
 
   constructor() {
     this.#persisted = new PersistedStore(STORAGES.APP_THEME_STATE, getSystemTheme());
@@ -89,13 +87,6 @@ class ThemeStore {
     return !this.state.shouldUseDarkColors;
   }
 
-  /**
-   * Check if theme is transitioning
-   */
-  get isTransitioning(): boolean {
-    return this.#isTransitioning;
-  }
-
   // ============================================================================
   // Theme Actions
   // ============================================================================
@@ -111,14 +102,16 @@ class ThemeStore {
    * Set theme to a specific value
    * @param theme - Theme type to set
    */
-  setTheme(theme: ThemeType): void {
-    this.#isTransitioning = true;
+  async setTheme(theme: ThemeType) {
     const currentState = this.state;
-    this.state = {
+    const newState = {
       ...currentState,
       theme,
       shouldUseDarkColors: theme === 'system' ? currentState.shouldUseDarkColors : theme === 'dark'
     };
+
+    await window.themeService.setTheme(newState.theme);
+    this.state = newState;
   }
 
   // ============================================================================
@@ -131,12 +124,7 @@ class ThemeStore {
   #setupThemeSync(): void {
     createRootEffect(() => {
       const currentState = this.state;
-      window.themeService.setTheme(currentState.theme).then(() => {
-        untrack(() => {
-          this.#applyThemeToDOM(currentState.shouldUseDarkColors);
-          this.#isTransitioning = false;
-        });
-      });
+      this.#applyThemeToDOM(currentState.shouldUseDarkColors);
     });
   }
 
@@ -149,15 +137,11 @@ class ThemeStore {
     if (isDarkCurrentlyApplied !== shouldApplyDark) {
       if (shouldApplyDark) {
         document.documentElement.classList.remove('light');
-        document.documentElement.classList.add('no-transition', 'dark');
+        document.documentElement.classList.add('dark');
       } else {
         document.documentElement.classList.remove('dark');
-        document.documentElement.classList.add('no-transition', 'light');
+        document.documentElement.classList.add('light');
       }
-
-      setTimeout(() => {
-        document.documentElement.classList.remove('no-transition');
-      }, 100);
     }
   }
 }
