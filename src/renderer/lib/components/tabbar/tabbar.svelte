@@ -1,19 +1,14 @@
 <script lang="ts" module>
-  import type { DndEvent } from '$lib/dnd';
-
   interface Props {
     class?: string;
     autoStretch?: boolean;
   }
-
-  type TabDndEvent = DndEvent<Tab>;
 </script>
 
 <script lang="ts">
   import { Separator } from '$lib/components/ui/separator';
   import { cn, isMac } from '$lib/utils';
   import { Plus } from '@lucide/svelte';
-  import { dndzone, TRIGGERS } from '$lib/dnd';
   import { cubicOut } from 'svelte/easing';
   import { getLoggerBy } from '@/shared/logging/helpers';
 
@@ -38,110 +33,110 @@
 
   let { class: className, autoStretch = false }: Props = $props();
 
-  let isDragging = $state(false);
-  let isDraggingOut = $state(false);
+  let draggedTabId = $state<string | null>(null);
 
   function handleNewTab() {
     windowStore.addChatTab();
   }
 
-  function handleDndConsider(e: CustomEvent<TabDndEvent>) {
-    const { info, items: newItems } = e.detail;
-    if (info.trigger === TRIGGERS.DRAG_STARTED) {
-      isDragging = true;
-      windowStore.reorderTabs(newItems, info.id);
-    } else if (info.trigger === TRIGGERS.DRAG_OUT) {
-      isDraggingOut = true;
+  function handleDragStart(e: DragEvent, tab: Tab) {
+    if (!e.dataTransfer) return;
 
-      // Start ghost window with simple text indicator
-      if (info.id) {
-        const tab = windowStore.tabs.find((t) => t.id === info.id);
-        if (tab) {
-          window.ghostWindowService
-            .start({
-              tabName: tab.name
-            })
-            .catch((error) => {
-              logger.error('Failed to start ghost window: {error}', { error });
-            });
-        }
+    draggedTabId = tab.id;
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', tab.id);
+
+    // Start tracking for cross-window detection
+    window.ghostWindowService.startTracking().catch((error) => {
+      logger.error('Failed to start tracking: {error}', { error });
+    });
+
+    logger.debug('Drag started for tab {tabId}', { tabId: tab.id });
+  }
+
+  function handleDragOver(e: DragEvent) {
+    e.preventDefault();
+    if (!e.dataTransfer) return;
+
+    e.dataTransfer.dropEffect = 'move';
+
+    // Calculate target index based on pointer position
+    const target = e.currentTarget as HTMLElement;
+    const tabElements = Array.from(target.querySelectorAll('[data-id]')) as HTMLElement[];
+
+    let targetIndex = tabElements.length;
+    for (let i = 0; i < tabElements.length; i++) {
+      const el = tabElements[i];
+      const rect = el.getBoundingClientRect();
+      const midpoint = rect.left + rect.width / 2;
+
+      if (e.clientX < midpoint) {
+        targetIndex = i;
+        break;
       }
-    } else {
-      windowStore.reorderTabs(newItems, info.id);
+    }
+
+    // Reorder tabs optimistically
+    if (draggedTabId) {
+      const currentIndex = windowStore.tabs.findIndex((t) => t.id === draggedTabId);
+      if (currentIndex !== -1 && currentIndex !== targetIndex) {
+        const newTabs = [...windowStore.tabs];
+        const [removed] = newTabs.splice(currentIndex, 1);
+        const insertAt = targetIndex > currentIndex ? targetIndex - 1 : targetIndex;
+        newTabs.splice(insertAt, 0, removed);
+        windowStore.reorderTabs(newTabs);
+      }
     }
   }
 
-  function handleDndFinalize(e: CustomEvent<TabDndEvent>) {
-    const { info, items: newItems } = e.detail;
-    isDragging = false;
+  function handleDrop(e: DragEvent) {
+    e.preventDefault();
+    logger.debug('Drop occurred in same window');
 
-    // If ghost window was started, handle it
-    if (isDraggingOut) {
-      isDraggingOut = false;
+    // Finalize the reorder (already done in dragover)
+    draggedTabId = null;
+  }
 
-      // If dragged out of zone, use dropAtPointer to handle collision detection
-      if (info.outOfZone && info.id && info.pointer) {
-        // Only the source window (window that owns the dragged tab) should handle the drop
-        const tabBelongsToThisWindow = windowStore.tabs.some((t) => t.id === info.id);
-        if (!tabBelongsToThisWindow) {
-          logger.debug('Tab {tabId} does not belong to this window, skipping drop', { tabId: info.id });
-          return;
+  async function handleDragEnd(e: DragEvent) {
+    const tabId = draggedTabId;
+    draggedTabId = null;
+
+    // Stop tracking
+    await window.ghostWindowService.stopTracking().catch((error) => {
+      logger.error('Failed to stop tracking: {error}', { error });
+    });
+
+    // Check if dropped outside the window
+    if (e.dataTransfer?.dropEffect === 'none' && tabId) {
+      logger.info('Tab dragged out of window, calling dropAtPointer');
+
+      const result = await window.tabService.dropAtPointer(tabId, {
+        screenX: e.screenX,
+        screenY: e.screenY
+      });
+
+      if (result) {
+        if (result.action === 'merged') {
+          logger.info('Tab merged into window {windowId}', { windowId: result.targetWindowId });
+        } else if (result.action === 'detached') {
+          logger.info('Tab detached to new window {windowId}', { windowId: result.newWindowId });
         }
-
-        logger.debug('Tab dragged out, dropping at pointer: {tabId}', { tabId: info.id });
-
-        const tabId = info.id;
-        const pointer = info.pointer;
-
-        // Drop first (backend reads insertTarget synchronously), then stop ghost
-        window.tabService
-          .dropAtPointer(tabId, { screenX: pointer.screenX, screenY: pointer.screenY })
-          .then((result) => {
-            if (result) {
-              if (result.action === 'merged') {
-                logger.info('Tab successfully merged into window: {windowId}', { windowId: result.targetWindowId });
-              } else if (result.action === 'detached') {
-                logger.info('Tab successfully detached to new window: {windowId}', { windowId: result.newWindowId });
-              }
-            } else {
-              logger.error('Failed to drop tab');
-            }
-          })
-          .catch((error) => {
-            logger.error('Error dropping tab: {error}', { error });
-          })
-          .finally(() => {
-            // Always stop ghost window after drop attempt
-            window.ghostWindowService.stop().catch((error) => {
-              logger.error('Failed to stop ghost window: {error}', { error });
-            });
-          });
-        return; // Don't reorder if dropping
-      } else {
-        // Dragged out but returned to zone - just stop ghost window and reorder
-        window.ghostWindowService.stop().catch((error) => {
-          logger.error('Failed to stop ghost window: {error}', { error });
-        });
       }
     }
 
-    // Normal reorder
-    windowStore.reorderTabs(newItems, info.id);
+    logger.debug('Drag ended');
   }
 </script>
 
 <div class={cn('flex h-full items-center outline-0', className)} role="tablist" style="app-region: drag;" aria-label="Tab bar" tabindex="0">
   <div
+    role="group"
     class={cn(
       'flex h-full min-w-full items-center gap-1 overflow-x-hidden px-4 outline-none focus:outline-none focus-visible:outline-none',
       isMac && 'pl-[80px]'
     )}
-    use:dndzone={{
-      items: windowStore.tabs,
-      orientation: 'horizontal'
-    }}
-    onconsider={handleDndConsider}
-    onfinalize={handleDndFinalize}
+    ondragover={handleDragOver}
+    ondrop={handleDrop}
   >
     {#each windowStore.tabs as tab, index (tab.id)}
       {@const isCurrentActive = tab.id === windowStore.activeTabId}
@@ -156,14 +151,15 @@
         aria-label={tab.name}
         in:slideExpand={{ duration: 300, easing: cubicOut }}
         out:slideExpand={{ duration: 200, easing: cubicOut }}
+        ondragend={handleDragEnd}
       >
         <TabItem
           {tab}
           stretch={autoStretch}
           closable={true}
-          disableHover={isDragging || isDraggingOut}
           onTabClick={() => windowStore.activateTab(tab.id)}
           onTabClose={() => windowStore.removeTab(tab.id)}
+          onDragStart={handleDragStart}
         />
         <div class="shrink-0 px-0.5" style="cursor: pointer !important;">
           <Separator

@@ -3,9 +3,9 @@
     tab: Tab;
     stretch?: boolean;
     closable: boolean;
-    disableHover?: boolean;
     onTabClick: (tab: Tab) => void;
     onTabClose: (tab: Tab) => void;
+    onDragStart?: (event: DragEvent, tab: Tab) => void;
     class?: string;
   }
 </script>
@@ -17,7 +17,7 @@
   import type { Tab } from '@/shared/types/window';
   import { X } from '@lucide/svelte';
 
-  const { tab, stretch = false, closable, disableHover = false, onTabClick, onTabClose, class: className }: Props = $props();
+  const { tab, stretch = false, closable, onTabClick, onTabClose, onDragStart, class: className }: Props = $props();
 
   async function handleContextMenu(e: MouseEvent) {
     e.preventDefault();
@@ -32,23 +32,29 @@
       ]
     });
   }
+
+  function handleDragStart(e: DragEvent) {
+    if (onDragStart) {
+      onDragStart(e, tab);
+    }
+  }
 </script>
 
 <div
   role="button"
   tabindex={0}
+  draggable={true}
   class={cn(
     'relative flex h-8 cursor-pointer items-center justify-center overflow-hidden rounded-lg px-2 text-sm ',
     stretch ? 'w-auto min-w-4' : 'w-32',
-    tab.isActive
-      ? 'bg-tabbar-active text-tabbar-active-foreground'
-      : !disableHover && 'transition-colors hover:bg-tabbar-accent  hover:text-tabbar-accent-foreground',
+    tab.isActive ? 'bg-tabbar-active text-tabbar-active-foreground' : 'transition-colors hover:bg-tabbar-accent hover:text-tabbar-accent-foreground',
     className
   )}
   style="app-region: no-drag;"
   onclick={() => onTabClick(tab)}
   onkeydown={(e) => e.key === 'Enter' && onTabClick(tab)}
   oncontextmenu={handleContextMenu}
+  ondragstart={handleDragStart}
 >
   <div class="contents">
     <span class="max-w-48 min-w-0 flex-1 truncate select-none" title={tab.name}>{tab.name}</span>

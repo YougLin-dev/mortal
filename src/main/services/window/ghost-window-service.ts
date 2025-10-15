@@ -1,4 +1,4 @@
-import { BaseWindow, WebContentsView, nativeTheme, screen, type IpcMainInvokeEvent } from 'electron';
+import { screen, type IpcMainInvokeEvent } from 'electron';
 
 import { Handler, Service } from '@/shared/decorators';
 import { getLoggerBy } from '@/shared/logging/helpers';
@@ -6,14 +6,8 @@ import { GLOBAL_EVENTS } from '@/shared/types/event';
 import { getTitlebarView } from '@/shared/types/view';
 import { eventEmitterService } from '../events/broadcaster';
 import { shellWindowService } from './shell-window-service';
-import { getAllShellWindows, tagBaseWindow } from '@/shared/types/window';
 
 const logger = getLoggerBy('service', 'ghost-window-service');
-
-interface GhostStartPayload {
-  tabName: string;
-  [key: string]: unknown;
-}
 
 interface InsertTarget {
   windowId: string;
@@ -23,152 +17,33 @@ interface InsertTarget {
 
 @Service
 export class GhostWindowService {
-  private ghostWindow: BaseWindow | null = null;
-  private ghostView: WebContentsView | null = null;
   private updateInterval: NodeJS.Timeout | null = null;
   private lastPointerPosition: { x: number; y: number } | null = null;
   private currentHoveredWindowId: string | null = null;
   private currentInsertTarget: InsertTarget | null = null;
-  private draggedWidth: number = 0;
-
-  private createGhostWindow(): BaseWindow {
-    logger.debug('Creating ghost window');
-
-    const win = tagBaseWindow(
-      new BaseWindow({
-        width: 120,
-        height: 32,
-        frame: false,
-        transparent: true,
-        skipTaskbar: true,
-        resizable: false,
-        movable: false,
-        focusable: false,
-        minimizable: false,
-        maximizable: false,
-        backgroundColor: '#00000000',
-        show: false
-      }),
-      'ghost'
-    );
-
-    // Create WebContentsView for the ghost window
-    const view = new WebContentsView({
-      webPreferences: {
-        nodeIntegration: false,
-        contextIsolation: true
-      }
-    });
-
-    view.setBounds({ x: 0, y: 0, width: 120, height: 32 });
-    view.setBackgroundColor('#00000000');
-    win.contentView.addChildView(view);
-
-    // Store view reference
-    this.ghostView = view;
-
-    win.setAlwaysOnTop(true, 'screen-saver');
-    win.setIgnoreMouseEvents(true, { forward: true });
-    win.setResizable(false);
-
-    return win;
-  }
-
-  private ensureGhostWindow(): BaseWindow {
-    if (!this.ghostWindow || this.ghostWindow.isDestroyed()) {
-      this.ghostWindow = this.createGhostWindow();
-    }
-    return this.ghostWindow;
-  }
 
   @Handler
-  async start(_event: IpcMainInvokeEvent, payload: GhostStartPayload): Promise<void> {
-    logger.info('Starting ghost window');
+  async startTracking(_event: IpcMainInvokeEvent): Promise<void> {
+    logger.info('Starting mouse tracking for drag operation');
 
     try {
-      const { tabName } = payload;
-
-      // Fixed small size for ghost indicator
-      const ghostWidth = 120;
-      const ghostHeight = 32;
-      this.draggedWidth = ghostWidth;
-
-      // Ensure ghost window exists
-      const ghost = this.ensureGhostWindow();
-
-      // Simple text indicator HTML using app's tabbar colors
-      const html = `
-        <!DOCTYPE html>
-        <html>
-          <head>
-            <meta charset="UTF-8">
-            <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <style>
-              * { margin: 0; padding: 0; box-sizing: border-box; }
-              html, body {
-                width: 120px;
-                height: 32px;
-                overflow: hidden;
-              }
-              body {
-                background: #ffffff;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                border-radius: 6px;
-                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-                font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-              }
-              body.dark {
-                background: #3c3c3c;
-              }
-              .text {
-                color: #1f1f1f;
-                font-size: 13px;
-                font-weight: 500;
-                padding: 0 12px;
-                white-space: nowrap;
-                overflow: hidden;
-                text-overflow: ellipsis;
-                max-width: 100%;
-              }
-              body.dark .text {
-                color: #e3e3e3;
-              }
-            </style>
-          </head>
-          <body class="${nativeTheme.shouldUseDarkColors ? 'dark' : ''}">
-            <div class="text">${tabName}</div>
-          </body>
-        </html>
-      `;
-
-      await this.ghostView!.webContents.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(html)}`);
-
       // Get current cursor position
       const cursorPos = screen.getCursorScreenPoint();
       this.lastPointerPosition = { x: cursorPos.x, y: cursorPos.y };
 
-      // Position the ghost window at cursor (centered)
-      ghost.setPosition(cursorPos.x - ghostWidth / 2, cursorPos.y - ghostHeight / 2);
-      ghost.show();
-
       // Start polling
       this.startPolling();
 
-      logger.debug('Ghost window started successfully at ({x}, {y})', {
-        x: cursorPos.x - ghostWidth / 2,
-        y: cursorPos.y - ghostHeight / 2
-      });
+      logger.debug('Mouse tracking started at ({x}, {y})', { x: cursorPos.x, y: cursorPos.y });
     } catch (error) {
-      logger.error('Failed to start ghost window: {error}', { error });
+      logger.error('Failed to start tracking: {error}', { error });
       throw error;
     }
   }
 
   @Handler
-  async stop(): Promise<void> {
-    logger.info('Stopping ghost window');
+  async stopTracking(): Promise<void> {
+    logger.info('Stopping mouse tracking');
 
     this.stopPolling();
 
@@ -177,23 +52,11 @@ export class GhostWindowService {
       this.clearHoverState(this.currentHoveredWindowId);
     }
 
-    if (this.ghostWindow && !this.ghostWindow.isDestroyed()) {
-      this.ghostWindow.hide();
-
-      // If no real app windows remain, destroy ghost to allow window-all-closed to fire
-      if (getAllShellWindows().length === 0) {
-        logger.debug('No real app windows remain, destroying ghost window');
-        this.ghostWindow.destroy();
-        this.ghostWindow = null;
-      }
-    }
-
     this.lastPointerPosition = null;
     this.currentHoveredWindowId = null;
     this.currentInsertTarget = null;
-    this.draggedWidth = 0;
 
-    logger.debug('Ghost window stopped');
+    logger.debug('Mouse tracking stopped');
   }
 
   @Handler
@@ -207,7 +70,7 @@ export class GhostWindowService {
 
   /**
    * Internal synchronous method for backend services.
-   * Called by dropAtPointer before stop() clears the target.
+   * Called by dropAtPointer before stopTracking() clears the target.
    */
   getCurrentInsertTargetSync(): InsertTarget | null {
     return this.currentInsertTarget;
@@ -220,7 +83,7 @@ export class GhostWindowService {
 
     // Poll at 60Hz
     this.updateInterval = setInterval(() => {
-      this.updateGhostPosition();
+      this.updateMousePosition();
     }, 1000 / 60);
 
     logger.debug('Started polling at 60Hz');
@@ -234,12 +97,7 @@ export class GhostWindowService {
     }
   }
 
-  private updateGhostPosition(): void {
-    if (!this.ghostWindow || this.ghostWindow.isDestroyed()) {
-      this.stopPolling();
-      return;
-    }
-
+  private updateMousePosition(): void {
     // Get current cursor position
     const cursorPos = screen.getCursorScreenPoint();
 
@@ -249,14 +107,6 @@ export class GhostWindowService {
     }
 
     this.lastPointerPosition = { x: cursorPos.x, y: cursorPos.y };
-
-    // Update ghost window position
-    const currentBounds = this.ghostWindow.getBounds();
-    this.ghostWindow.setBounds({
-      ...currentBounds,
-      x: cursorPos.x - currentBounds.width / 2,
-      y: cursorPos.y - currentBounds.height / 2
-    });
 
     // Find window at cursor position
     const targetWindowData = shellWindowService.findWindowAtPoint(cursorPos.x, cursorPos.y);
@@ -302,7 +152,7 @@ export class GhostWindowService {
     eventEmitterService.emitTo(titlebarView.webContents.id, GLOBAL_EVENTS.TAB_DRAG_GHOST_HOVER, {
       clientX,
       clientY,
-      draggedWidth: this.draggedWidth
+      draggedWidth: 120 // Default width for indicator calculation
     });
   }
 

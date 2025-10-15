@@ -21,8 +21,8 @@ declare global {
     };
 
     ghostWindowService: {
-      start: (payload: { tabName: string }) => Promise<void>;
-      stop: () => Promise<void>;
+      startTracking: () => Promise<void>;
+      stopTracking: () => Promise<void>;
       updateInsertIndex: (target: { windowId: string; insertIndex: number }) => Promise<void>;
     };
 
