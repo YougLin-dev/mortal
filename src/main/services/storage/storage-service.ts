@@ -29,7 +29,7 @@ export class StorageService {
         this.latestSenders.delete(key);
       }
 
-      logger.debug('Storage changed for key {key}, using last sender {senderId} (queue cleared)', {
+      logger.debug('Storage changed for key {key}, send to other WebContentView except {senderId}', {
         key,
         senderId: senderId ?? 'none (main process update)'
       });
