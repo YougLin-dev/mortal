@@ -209,16 +209,28 @@ export class ShellWindowService {
 
   public findWindowAtPoint(screenX: number, screenY: number): { win: BaseWindow; windowId: string } | null {
     const allWindows = getAllShellWindows();
+
+    // Heuristic: prefer the currently focused window if it contains the point.
+    // This avoids choosing an overlapped background window when dragging from the top window.
+    const focused = BaseWindow.getFocusedWindow();
+    if (focused && !focused.isDestroyed()) {
+      const fb = focused.getBounds();
+      const withinFocused = screenX >= fb.x && screenX <= fb.x + fb.width && screenY >= fb.y && screenY <= fb.y + fb.height;
+      const focusedId = this.getWindowId(focused);
+      if (withinFocused && focusedId) {
+        return { win: focused, windowId: focusedId };
+      }
+    }
+
+    // Fall back: scan all shell windows and pick the first that contains the point.
+    // Note: BaseWindow.getAllWindows() ordering is not guaranteed; this is a best-effort fallback.
     for (const win of allWindows) {
       if (win.isDestroyed()) continue;
-
       const bounds = win.getBounds();
-      if (screenX >= bounds.x && screenX <= bounds.x + bounds.width && screenY >= bounds.y && screenY <= bounds.y + bounds.height) {
-        const windowId = this.getWindowId(win);
-        if (windowId) {
-          return { win, windowId };
-        }
-      }
+      const within = screenX >= bounds.x && screenX <= bounds.x + bounds.width && screenY >= bounds.y && screenY <= bounds.y + bounds.height;
+      if (!within) continue;
+      const windowId = this.getWindowId(win);
+      if (windowId) return { win, windowId };
     }
     return null;
   }

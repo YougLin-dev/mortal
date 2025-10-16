@@ -45,7 +45,7 @@
   tabindex={0}
   draggable={true}
   class={cn(
-    'relative flex h-8 cursor-pointer items-center justify-center overflow-hidden rounded-lg px-2 text-sm ',
+    'relative flex h-full cursor-pointer items-center justify-center overflow-hidden rounded-md px-2 text-sm ',
     stretch ? 'w-auto min-w-4' : 'w-32',
     tab.isActive ? 'bg-tabbar-active text-tabbar-active-foreground' : 'transition-colors hover:bg-tabbar-accent hover:text-tabbar-accent-foreground',
     className
@@ -62,7 +62,7 @@
       <button
         title="关闭标签页"
         class={cn(
-          'h-auto w-auto shrink-0 rounded-full bg-transparent p-1 transition-colors hover:bg-accent hover:text-accent-foreground dark:hover:bg-accent/50'
+          'h-auto w-auto shrink-0 rounded-md bg-transparent p-1 transition-colors hover:bg-accent hover:text-accent-foreground dark:hover:bg-accent/50'
         )}
         onclick={(e) => {
           e.stopPropagation();

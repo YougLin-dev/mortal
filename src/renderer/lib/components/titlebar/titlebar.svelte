@@ -85,7 +85,7 @@
   });
 </script>
 
-<header class="fixed top-titlebar-area-y right-0 left-titlebar-area-x z-50 flex h-titlebar-h w-titlebar-w items-center" style="app-region: drag;">
+<header class="fixed top-titlebar-area-y right-0 left-titlebar-area-x z-50 flex h-full w-titlebar-w items-center" style="app-region: drag;">
   <TabBar class="w-[calc(100%-122px)]" />
   <PinSwitch class="mr-2" style="app-region: no-drag;" />
   <ThemeSwitch class="mr-2" style="app-region: no-drag;" />
