@@ -5,7 +5,6 @@ import { getLoggerBy } from '@/shared/logging/helpers';
 import { getContentViews, getTitlebarView, getWindowByWebContents, tagView, type TaggedWebContentsView } from '@/shared/types/view';
 import { getAllShellWindows, isGhostWindow, tagBaseWindow, type Tab, type WindowState } from '@/shared/types/window';
 import { toArgument } from '@/shared/utils/preload-utils';
-import { isDev } from '@/main/utils/dev';
 import { isMac } from '@/main/utils/platform';
 import { BaseWindow, Menu, nativeTheme, WebContentsView, type IpcMainInvokeEvent, type WebContents } from 'electron';
 import * as path from 'node:path';
@@ -121,7 +120,7 @@ export class ShellWindowService {
           contextIsolation: true,
           allowRunningInsecureContent: false,
           experimentalFeatures: false,
-          devTools: isDev,
+          devTools: true,
           additionalArguments: [toArgument('windowState', windowState), toArgument('locale', storage.getSync(STORAGES.APP_I18N_LOCALE))],
           transparent: true
         }
@@ -131,6 +130,9 @@ export class ShellWindowService {
     );
 
     view.setBounds({ x: 0, y: topViewHeight, width: bottomWidth, height: bottomHeight });
+
+    // Setup F12 shortcut for DevTools
+    this.#setupDevToolsShortcut(view.webContents, window);
 
     return view;
   }
@@ -155,12 +157,6 @@ export class ShellWindowService {
 
       if (MAIN_WINDOW_VITE_DEV_SERVER_URL) {
         view.webContents.loadURL(`${MAIN_WINDOW_VITE_DEV_SERVER_URL}/${INDEX.CONTENT}#${url}`);
-
-        view.webContents.once('did-frame-finish-load', () => {
-          if (!view.webContents.isDestroyed() && !view.webContents.isDevToolsOpened()) {
-            view.webContents.openDevTools({ mode: 'detach' });
-          }
-        });
       } else {
         const tabUrl = url.startsWith('/') ? url : `/${url}`;
         view.webContents.loadURL(`${contentProtocol.getLoadUrl()}#${tabUrl}`);
@@ -177,8 +173,8 @@ export class ShellWindowService {
     try {
       window.contentView.removeChildView(view);
 
-      // Close DevTools if open (dev mode)
-      if (isDev && !view.webContents.isDestroyed() && view.webContents.isDevToolsOpened()) {
+      // Close DevTools if open
+      if (!view.webContents.isDestroyed() && view.webContents.isDevToolsOpened()) {
         view.webContents.closeDevTools();
         logger.debug('Closed DevTools for tab {tabId}', { tabId: view.__tabId });
       }
@@ -244,6 +240,74 @@ export class ShellWindowService {
   }
 
   /// private
+  /**
+   * Get the currently focused webContents in a window
+   * @param window The window to search in
+   * @returns The focused WebContents or null if none is focused
+   */
+  #getFocusedWebContents(window: BaseWindow): WebContents | null {
+    const titlebarView = getTitlebarView(window);
+    const contentViews = getContentViews(window);
+    const allViews = [...(titlebarView ? [titlebarView] : []), ...contentViews];
+
+    for (const view of allViews) {
+      if (!view.webContents.isDestroyed() && view.webContents.isFocused()) {
+        return view.webContents;
+      }
+    }
+
+    return null;
+  }
+
+  /**
+   * Open or focus DevTools for a webContents
+   * If DevTools is not open, it will be opened in detach mode
+   * If DevTools is already open, it will be focused
+   * @param webContents The webContents to open/focus DevTools for
+   */
+  #openOrFocusDevTools(webContents: WebContents): void {
+    if (webContents.isDestroyed()) {
+      logger.warn('Cannot open DevTools for destroyed webContents');
+      return;
+    }
+
+    if (webContents.isDevToolsOpened()) {
+      // DevTools already open, focus it
+      const devToolsWebContents = webContents.devToolsWebContents;
+      if (devToolsWebContents && !devToolsWebContents.isDestroyed()) {
+        devToolsWebContents.focus();
+        logger.debug('Focused existing DevTools window');
+      }
+    } else {
+      // DevTools not open, open it
+      webContents.openDevTools({ mode: 'detach' });
+      logger.debug('Opened DevTools in detach mode');
+    }
+  }
+
+  /**
+   * Setup F12 keyboard shortcut for DevTools
+   * @param webContents The webContents to setup the shortcut for
+   * @param window The window containing the webContents
+   */
+  #setupDevToolsShortcut(webContents: WebContents, window: BaseWindow): void {
+    webContents.on('before-input-event', (event, input) => {
+      // Check for F12 key
+      if (input.type === 'keyDown' && input.key === 'F12') {
+        event.preventDefault();
+
+        // Get the currently focused webContents in this window
+        const focusedWebContents = this.#getFocusedWebContents(window);
+
+        if (focusedWebContents) {
+          this.#openOrFocusDevTools(focusedWebContents);
+        } else {
+          logger.debug('No focused webContents found, cannot open DevTools');
+        }
+      }
+    });
+  }
+
   #buildWindowByWindowState(windowStateManager: WindowStateManager, opts?: { skipActiveTabContent?: boolean }) {
     const { shouldUseDarkColors } = nativeTheme;
     const newWindow = tagBaseWindow(
@@ -285,7 +349,7 @@ export class ShellWindowService {
           contextIsolation: true,
           allowRunningInsecureContent: false,
           experimentalFeatures: false,
-          devTools: isDev,
+          devTools: true,
           additionalArguments: argumenst,
           transparent: true
         }
@@ -294,6 +358,9 @@ export class ShellWindowService {
     );
 
     topView.setBounds({ x: 0, y: 0, width: windowStateManager.width, height: topViewHeight });
+
+    // Setup F12 shortcut for titlebar
+    this.#setupDevToolsShortcut(topView.webContents, newWindow);
 
     // loading
     const loadingView = tagView(
@@ -304,7 +371,7 @@ export class ShellWindowService {
           contextIsolation: true,
           allowRunningInsecureContent: false,
           experimentalFeatures: false,
-          devTools: isDev,
+          devTools: true,
           additionalArguments: argumenst,
           transparent: true
         }
@@ -313,6 +380,9 @@ export class ShellWindowService {
       '__loading__'
     );
     loadingView.setBounds({ x: 0, y: topViewHeight, width: bottomViewWidth, height: bottomViewHeight });
+
+    // Setup F12 shortcut for loading view
+    this.#setupDevToolsShortcut(loadingView.webContents, newWindow);
 
     // content views (only active tab)
     const activeTab = windowStateManager.windowState.tabs.find((tab) => tab.isActive);
@@ -344,10 +414,8 @@ export class ShellWindowService {
       contentViews.forEach((contentView) => contentView.setBounds({ x: 0, y: topViewHeight, width: newBottomWidth, height: newBottomHeight }));
     });
 
-    // Clean up DevTools when window closes (dev mode)
+    // Clean up DevTools when window closes
     newWindow.on('close', () => {
-      if (!isDev) return;
-
       const titlebarView = getTitlebarView(newWindow);
       const contentViews = getContentViews(newWindow);
       const allViews = [...(titlebarView ? [titlebarView] : []), ...contentViews];
@@ -474,21 +542,10 @@ export class ShellWindowService {
     if (loadingView) loadingViewWebContents = loadingView?.webContents;
 
     if (MAIN_WINDOW_VITE_DEV_SERVER_URL) {
-      topWebContents.once('did-frame-finish-load', () => {
-        if (!topWebContents.isDestroyed() && !topWebContents.isDevToolsOpened()) {
-          topWebContents.openDevTools({ mode: 'detach' });
-        }
-      });
       otherContentViewsWebContents.forEach(([tabId, otherContentViewsWebContent]) => {
         const currentTab = tabs.find((t) => t.id === tabId);
         if (currentTab) {
           otherContentViewsWebContent.loadURL(`${MAIN_WINDOW_VITE_DEV_SERVER_URL}/${INDEX.CONTENT}#${currentTab.url}`);
-          // dev tools
-          otherContentViewsWebContent.once('did-frame-finish-load', () => {
-            if (!otherContentViewsWebContent.isDestroyed() && !otherContentViewsWebContent.isDevToolsOpened()) {
-              otherContentViewsWebContent.openDevTools({ mode: 'detach' });
-            }
-          });
         }
       });
 

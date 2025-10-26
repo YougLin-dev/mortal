@@ -29,8 +29,8 @@
   const logger = getLoggerBy('component', 'tabbar');
 
   import TabItem from './tabbar-item.svelte';
-  import type { Tab } from '@/shared/types/window';
   import { windowStore } from '$lib/stores/window.store.svelte';
+  import { flip } from 'svelte/animate';
 
   let { class: className, autoStretch = false }: Props = $props();
 
@@ -43,8 +43,22 @@
     windowStore.addChatTab();
   }
 
-  function handleDragStart(e: DragEvent, tab: Tab) {
+  function handleDragStart(e: DragEvent) {
     if (!e.dataTransfer) return;
+
+    // Find the draggable element (TabItem's root div)
+    const draggableElement = (e.target as HTMLElement).closest('[data-tab-draggable]');
+    if (!draggableElement) return;
+
+    // The parent element should be the wrapper div with data-id
+    const tabElement = draggableElement.parentElement;
+    if (!tabElement) return;
+
+    const tabId = tabElement.getAttribute('data-id');
+    if (!tabId) return;
+
+    const tab = windowStore.tabs.find((t) => t.id === tabId);
+    if (!tab) return;
 
     draggedTabId = tab.id;
     pendingTargetIndex = null;
@@ -205,23 +219,20 @@
       isMac && 'pl-[80px]'
     )}
     bind:this={groupEl}
+    ondragstart={handleDragStart}
     ondragover={handleDragOver}
     ondrop={handleDrop}
+    ondragend={handleDragEnd}
   >
-    {#each windowStore.tabs as tab, index (tab.id)}
-      {@const isCurrentActive = tab.id === windowStore.activeTabId}
-      {@const nextTab = windowStore.tabs[index + 1]}
-      {@const isNextActive = nextTab?.id === windowStore.activeTabId}
-      {@const isLastTab = index === windowStore.tabs.length - 1}
-      {@const shouldShowSeparator = !isLastTab && !isCurrentActive && !isNextActive}
+    {#each windowStore.tabs as tab (tab.id)}
       <div
         class={cn('flex h-full min-w-0 items-center', autoStretch && 'flex-1 basis-0')}
         data-id={tab.id}
         role="presentation"
         aria-label={tab.name}
+        animate:flip={{ duration: 200, easing: cubicOut }}
         in:slideExpand={{ duration: 300, easing: cubicOut }}
         out:slideExpand={{ duration: 200, easing: cubicOut }}
-        ondragend={handleDragEnd}
       >
         <TabItem
           {tab}
@@ -229,14 +240,7 @@
           closable={true}
           onTabClick={() => windowStore.activateTab(tab.id)}
           onTabClose={() => windowStore.removeTab(tab.id)}
-          onDragStart={handleDragStart}
         />
-        <div class="shrink-0" style="cursor: pointer !important;">
-          <Separator
-            orientation="vertical"
-            class="!h-[20px] !w-0.5 transition-opacity duration-200 {shouldShowSeparator ? 'opacity-30' : 'opacity-0'}"
-          />
-        </div>
       </div>
     {/each}
 
