@@ -17,22 +17,15 @@
     const tabs = windowStore.tabs;
     if (tabs.length === 0) return 0;
 
-    // Get all tab elements
-    const tabElements = document.querySelectorAll('[data-id]');
-    if (tabElements.length === 0) return tabs.length;
+    const firstTab = document.querySelector('[data-id]') as HTMLElement;
+    if (!firstTab) return tabs.length;
 
-    // Find insertion point
-    for (let i = 0; i < tabElements.length; i++) {
-      const tabEl = tabElements[i] as HTMLElement;
-      const rect = tabEl.getBoundingClientRect();
-      const midpoint = rect.left + rect.width / 2;
+    const rect = firstTab.getBoundingClientRect();
+    const tabWidth = rect.width;
 
-      if (clientX < midpoint) {
-        return i;
-      }
-    }
-
-    return tabs.length;
+    const offset = clientX - rect.left;
+    const index = Math.floor(offset / tabWidth + 0.5);
+    return Math.max(0, Math.min(index, tabs.length));
   }
 
   function handleGhostHover(event: { clientX: number; clientY: number; draggedWidth: number }) {
@@ -41,16 +34,12 @@
     // Calculate insert index
     const newInsertIndex = calculateInsertIndex(clientX);
 
-    // Update indicator position
-    const tabElements = document.querySelectorAll('[data-id]');
-    if (newInsertIndex === 0 && tabElements.length > 0) {
-      const firstTab = tabElements[0] as HTMLElement;
+    // Calculate indicator position using uniform tab width
+    const firstTab = document.querySelector('[data-id]') as HTMLElement;
+    if (firstTab && windowStore.tabs.length > 0) {
       const rect = firstTab.getBoundingClientRect();
-      insertIndicatorX = rect.left;
-    } else if (newInsertIndex > 0 && newInsertIndex <= tabElements.length) {
-      const prevTab = tabElements[newInsertIndex - 1] as HTMLElement;
-      const rect = prevTab.getBoundingClientRect();
-      insertIndicatorX = rect.right;
+      const tabWidth = rect.width;
+      insertIndicatorX = rect.left + newInsertIndex * tabWidth;
     } else {
       insertIndicatorX = null;
     }
