@@ -82,7 +82,7 @@
 
   {#if insertIndicatorX !== null}
     <div
-      class="pointer-events-none absolute top-0 z-[60] h-full w-0.5 bg-blue-500 transition-all duration-75"
+      class="pointer-events-none absolute top-0 z-60 h-full w-0.5 bg-blue-500 transition-all duration-75"
       style="left: {insertIndicatorX}px;"
     ></div>
   {/if}
