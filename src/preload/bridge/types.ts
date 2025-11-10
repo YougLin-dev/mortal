@@ -46,8 +46,6 @@ declare global {
       getMeta: (key: string) => Promise<StorageMetadata>;
       setMeta: (key: string, metadata: Record<string, StorageValue | Date | undefined>) => Promise<void>;
       removeMeta: (key: string) => Promise<void>;
-      watch: (watchKey: string) => Promise<void>;
-      unwatch: (watchKey: string) => Promise<void>;
       getItems: (keys: string[]) => Promise<StorageItem[]>;
       setItems: (items: StorageItem[]) => Promise<void>;
     };

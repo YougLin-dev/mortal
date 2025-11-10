@@ -29,15 +29,13 @@ class ElectronStorageAdapter<T extends StorageValue> {
   }
 
   async watchAsync<T extends StorageValue>(watchKey: string, callback: (params: { key: string; value: T }) => void): Promise<void> {
-    await this.storageService.watch(watchKey);
-
     this.events.on(`storage:${watchKey}`, (event) => {
       callback({ key: event.key, value: event.value as T });
     });
   }
 
   async unwatchAsync(watchKey: string): Promise<void> {
-    await this.storageService.unwatch(watchKey);
+    this.events.off(`storage:${watchKey}`);
   }
 }
 
